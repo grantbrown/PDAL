@@ -189,11 +189,24 @@ int PcQuery::execute()
 
     const Schema& schema = reader->getSchema();
     PointBuffer data(schema, 0);
-    
     boost::scoped_ptr<StageSequentialIterator> iter(reader->createSequentialIterator(data));
+    /*How to I find out the number of point records?*/
+    int npts = 100;
+    /*
+     
+    flann::Matrix<float> X = new float[npts];
+    flann::Matrix<float> Y = new float[npts];
+    flann::Matrix<float> Z = new float[npts];
+    */
 
-#endif
+
+    while (!iter->atEnd())
+    {
+        iter -> read(data);
+    }
     /*Iterate until end of file, store data in format suitable for flann?*/
+#endif
+
 
     pdal::Options options = m_options + readerOptions;
     
