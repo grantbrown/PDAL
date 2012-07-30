@@ -50,6 +50,10 @@
 #include "Application.hpp"
 #include <cstdarg>
 
+#ifdef PDAL_HAVE_FLANN
+#include <flann/flann.hpp>
+#endif
+
 #ifdef PDAL_HAVE_GEOS
 #include <geos_c.h>
 
@@ -178,12 +182,17 @@ int PcQuery::execute()
         readerOptions.add<boost::uint32_t>("verbose", getVerboseLevel());
     }
 
+#ifdef PDAL_HAVE_FLANN
+
+
     Stage* reader = AppSupport::makeReader(readerOptions);
 
     const Schema& schema = reader->getSchema();
     PointBuffer data(schema, 0);
     
     boost::scoped_ptr<StageSequentialIterator> iter(reader->createSequentialIterator(data));
+
+#endif
     /*Iterate until end of file, store data in format suitable for flann?*/
 
     pdal::Options options = m_options + readerOptions;
