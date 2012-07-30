@@ -180,7 +180,11 @@ int PcQuery::execute()
 
     Stage* reader = AppSupport::makeReader(readerOptions);
 
+    const Schema& schema = reader->getSchema();
+    PointBuffer data(schema, 0);
     
+    boost::scoped_ptr<StageSequentialIterator> iter(reader->createSequentialIterator(data));
+    /*Iterate until end of file, store data in format suitable for flann?*/
 
     pdal::Options options = m_options + readerOptions;
     
