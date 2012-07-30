@@ -184,7 +184,6 @@ int PcQuery::execute()
 
 #ifdef PDAL_HAVE_FLANN
 
-
     Stage* reader = AppSupport::makeReader(readerOptions);
 
     const Schema& schema = reader->getSchema();
@@ -192,6 +191,8 @@ int PcQuery::execute()
     boost::scoped_ptr<StageSequentialIterator> iter(reader->createSequentialIterator(data));
     /*How to I find out the number of point records?*/
     int npts = 100;
+
+
     /*
      
     flann::Matrix<float> X = new float[npts];
@@ -199,13 +200,16 @@ int PcQuery::execute()
     flann::Matrix<float> Z = new float[npts];
     */
 
-
+    /*
     while (!iter->atEnd())
     {
         iter -> read(data);
     }
+    */
     /*Iterate until end of file, store data in format suitable for flann?*/
+
 #endif
+
 
 
     pdal::Options options = m_options + readerOptions;
@@ -221,6 +225,7 @@ int PcQuery::execute()
     
     delete filter;
     delete reader;
+
 
 
     
