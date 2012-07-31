@@ -187,9 +187,9 @@ int PcQuery::execute()
     Stage* reader = AppSupport::makeReader(readerOptions);
 
     const Schema& schema = reader->getSchema();
-    PointBuffer& data = new PointBuffer(schema, 0);
+    PointBuffer* data = new PointBuffer(schema, 0);
     //PointBuffer data(schema, 0);
-    boost::scoped_ptr<StageSequentialIterator> iter(reader->createSequentialIterator(data));
+    boost::scoped_ptr<StageSequentialIterator> iter(reader->createSequentialIterator(*data));
     /*How to I find out the number of point records?*/
     int npts = 100;
 
@@ -204,7 +204,7 @@ int PcQuery::execute()
     
     while (!iter->atEnd())
     {
-        iter -> read(data);
+        iter -> read(*data);
     }
     
     /*Iterate until end of file, store data in format suitable for flann?*/
@@ -224,9 +224,14 @@ int PcQuery::execute()
     
     std::cout << std::endl;
     
-    delete &data;
+    std::cout << "Loc 1" << std::endl;
+    delete data;
+    std::cout << "Loc 2" << std::endl;
     delete filter;
+    std::cout << "Loc 3" << std::endl;
     delete reader;
+    std::cout << "Loc 4" << std::endl;
+
 
 
 
