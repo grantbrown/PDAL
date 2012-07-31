@@ -123,6 +123,10 @@ PcQuery::PcQuery(int argc, char* argv[])
 void PcQuery::validateSwitches()
 {
     
+    if (m_inputFile == "")
+    {
+        throw app_usage_error("--input/-i required");
+    }
     if (m_wkt.size())
     {
 #ifdef PDAL_HAVE_GEOS
@@ -171,8 +175,6 @@ void PcQuery::addSwitches()
 
 int PcQuery::execute()
 {
-
-
     Options readerOptions;
     {
         if (m_usestdin)
@@ -184,12 +186,14 @@ int PcQuery::execute()
 
 #ifdef PDAL_HAVE_FLANN
 
-    Stage* reader = AppSupport::makeReader(readerOptions);
+    Stage* stage = AppSupport::makeReader(readerOptions);
 
-    const Schema& schema = reader->getSchema();
+    const boost::uint64_t numPointsToRead = stage->getNumPoints();
+    std::cout << numPointsToRead << std::endl;
+    const Schema& schema = stage->getSchema();
     PointBuffer* data = new PointBuffer(schema, 0);
     //PointBuffer data(schema, 0);
-    boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(reader->createSequentialIterator(*data));
+    boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(stage->createSequentialIterator(*data));
     /*How to I find out the number of point records?*/
     int npts = 100;
 
@@ -200,11 +204,12 @@ int PcQuery::execute()
     flann::Matrix<float> Y = new float[npts];
     flann::Matrix<float> Z = new float[npts];
     */
-
-    
-    while (!(*iter)->atEnd())
+    std::cout << stage -> getNumPoints() << std::endl;
+    int itr = 0; 
+    while (!((**iter).atEnd()))
     {
-        //iter -> read(*data);
+        std::cout << itr << std::endl;
+        itr ++;
         (**iter).read(*data);
     }
     
@@ -216,7 +221,7 @@ int PcQuery::execute()
 
     pdal::Options options = m_options + readerOptions;
     
-    pdal::filters::Index* filter = new pdal::filters::Index(*reader, options);
+    pdal::filters::Index* filter = new pdal::filters::Index(*stage, options);
 
     filter->initialize();
 
@@ -225,15 +230,12 @@ int PcQuery::execute()
     
     std::cout << std::endl;
     
-    std::cout << "Loc 1" << std::endl;
+
     delete data;
-    std::cout << "Loc 2" << std::endl;
     delete iter;
-    std::cout << "Loc 3" << std::endl;
     delete filter;
-    std::cout << "Loc 4" << std::endl;
-    delete reader;
-    std::cout << "Loc 5" << std::endl;
+    delete stage;
+
 
 
 
