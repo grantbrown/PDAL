@@ -210,7 +210,7 @@ int PcQuery::execute()
     boost::uint64_t numPoints = stage->getNumPoints();
     std::cout << numPoints << std::endl;
     const Schema& schema = stage->getSchema();
-    PointBuffer* data = new PointBuffer(schema);
+    PointBuffer* data = new PointBuffer(schema, 1);
     //PointBuffer data(schema, 0);
     boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(stage->createSequentialIterator(*data));
 
@@ -218,22 +218,29 @@ int PcQuery::execute()
         
     
        
-    double x;
-    double y;
-    double z;
+    double* x = new double[numPoints];
+    double* y = new double[numPoints];
+    double* z = new double[numPoints];
     //boost::property_tree::ptree data_container;
 
+    boost::uint32_t itr = 0;
     while (!((**iter).atEnd()))
     {
         (**iter).read(*data);
-        std::cout << data -> getField<double>(schema.getDimension("X"), 1) << std::endl;
+        x[itr] = data -> getField<boost::uint32_t>(schema.getDimension("X"),0);
+        y[itr] = data -> getField<boost::uint32_t>(schema.getDimension("Y"),0);
+        z[itr] = data -> getField<boost::uint32_t>(schema.getDimension("Z"),0);
+        itr ++;
         //data_container = data->toPTree();
         //x = data_container.get_child("0").get<double>("X");
         //y = data_container.get_child("0").get<double>("Y");
         //z = data_container.get_child("0").get<double>("Z");
 
         //write_json(std::cout, data_container.get_child("0"));
-
+        if (itr > numPoints)
+        {
+            std::cout << "Iterate Past End!" << std::endl;
+        }
     }
     std::cout << "End Iters" << std::endl;
     
