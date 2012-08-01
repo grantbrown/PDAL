@@ -216,11 +216,14 @@ int PcQuery::execute()
 
     
     int itr = 0; 
+    boost::property_tree::ptree data_container;
     while (!((**iter).atEnd()))
     {
         /*std::cout << itr << std::endl;*/
         itr ++;
         (**iter).read(*data);
+        data_container = data->toPTree();
+
     }
     std::cout << "End Iters" << std::endl;
     
@@ -228,7 +231,6 @@ int PcQuery::execute()
     
     std::cout << std::endl;
     
-
     delete data;
     delete iter;
     delete filter;
