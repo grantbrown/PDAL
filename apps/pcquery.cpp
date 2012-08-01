@@ -101,6 +101,8 @@ private:
     void addSwitches(); // overrride
     void validateSwitches(); // overrride
 
+    boost::uint64_t numPoints;
+
     std::string m_inputFile;
     std::string m_wkt;
 
@@ -188,33 +190,13 @@ int PcQuery::execute()
 
     Stage* stage = AppSupport::makeReader(readerOptions);
 
-    const boost::uint64_t numPointsToRead = stage->getNumPoints();
-    std::cout << numPointsToRead << std::endl;
-    const Schema& schema = stage->getSchema();
-    PointBuffer* data = new PointBuffer(schema, 0);
-    //PointBuffer data(schema, 0);
-    boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(stage->createSequentialIterator(*data));
-    /*How to I find out the number of point records?*/
-    int npts = 100;
 
-    
-    /*
-    
+
+    /*    
     flann::Matrix<float> X = new float[npts];
     flann::Matrix<float> Y = new float[npts];
     flann::Matrix<float> Z = new float[npts];
     */
-    std::cout << stage -> getNumPoints() << std::endl;
-    int itr = 0; 
-    while (!((**iter).atEnd()))
-    {
-        std::cout << itr << std::endl;
-        itr ++;
-        (**iter).read(*data);
-    }
-    
-    /*Iterate until end of file, store data in format suitable for flann?*/
-
 #endif
 
 
@@ -225,7 +207,23 @@ int PcQuery::execute()
 
     filter->initialize();
 
+    boost::uint64_t numPoints = stage->getNumPoints();
+    std::cout << numPoints << std::endl;
+    const Schema& schema = stage->getSchema();
+    PointBuffer* data = new PointBuffer(schema, 1);
+    //PointBuffer data(schema, 0);
+    boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(stage->createSequentialIterator(*data));
 
+    
+    int itr = 0; 
+    while (!((**iter).atEnd()))
+    {
+        /*std::cout << itr << std::endl;*/
+        itr ++;
+        (**iter).read(*data);
+    }
+    std::cout << "End Iters" << std::endl;
+    
     
     
     std::cout << std::endl;
