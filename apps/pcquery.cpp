@@ -215,14 +215,20 @@ int PcQuery::execute()
     boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(stage->createSequentialIterator(*data));
 
     
-    int itr = 0; 
+   
+    double x;
+    double y;
+    double z;
     boost::property_tree::ptree data_container;
     while (!((**iter).atEnd()))
     {
-        /*std::cout << itr << std::endl;*/
-        itr ++;
+        /*std::cout << itr << std::endl;*/ 
         (**iter).read(*data);
         data_container = data->toPTree();
+        x = data_container.get_child("0").get<double>("X");
+        y = data_container.get_child("0").get<double>("Y");
+        z = data_container.get_child("0").get<double>("Z");
+        //write_json(std::cout, data_container.get_child("0"));
 
     }
     std::cout << "End Iters" << std::endl;
