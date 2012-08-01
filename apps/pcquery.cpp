@@ -46,12 +46,14 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+#include <boost/lexical_cast.hpp>
+
 #include "AppSupport.hpp"
 #include "Application.hpp"
 #include <cstdarg>
 
 #ifdef PDAL_HAVE_FLANN
-#include <flann/flann.hpp>
+#include <flann/flann.h>
 #endif
 
 #ifdef PDAL_HAVE_GEOS
@@ -177,6 +179,8 @@ void PcQuery::addSwitches()
 
 int PcQuery::execute()
 {
+    using namespace flann;
+    using boost::lexical_cast;
     Options readerOptions;
     {
         if (m_usestdin)
@@ -215,35 +219,58 @@ int PcQuery::execute()
     boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(stage->createSequentialIterator(*data));
 
 
-        
+    /*GET INFORMATION FROM WKT HERE*/
+    int t_numPoints = 1;
+
+     float* t_xyz = new float[3];
+     t_xyz[0] = 0.0;
+     t_xyz[1] = 0.0;
+     t_xyz[2] = 0.0;
+
+
+
+
+    /*END TEST WKT CODE*/
     
-       
-    double* x = new double[numPoints];
-    double* y = new double[numPoints];
-    double* z = new double[numPoints];
+    int dim = 3;
+    float* xyz = new float[numPoints*dim];
+   
     //boost::property_tree::ptree data_container;
 
     boost::uint32_t itr = 0;
     while (!((**iter).atEnd()))
     {
         (**iter).read(*data);
-        x[itr] = data -> getField<boost::uint32_t>(schema.getDimension("X"),0);
-        y[itr] = data -> getField<boost::uint32_t>(schema.getDimension("Y"),0);
-        z[itr] = data -> getField<boost::uint32_t>(schema.getDimension("Z"),0);
+        xyz[itr] = lexical_cast<float>(data -> getField<boost::uint32_t>(schema.getDimension("X"),0));
+        xyz[itr+1] = lexical_cast<float>(data -> getField<boost::uint32_t>(schema.getDimension("Y"),0));
+        xyz[itr+2] = lexical_cast<float>(data -> getField<boost::uint32_t>(schema.getDimension("Z"),0));
         itr ++;
-        //data_container = data->toPTree();
-        //x = data_container.get_child("0").get<double>("X");
-        //y = data_container.get_child("0").get<double>("Y");
-        //z = data_container.get_child("0").get<double>("Z");
-
-        //write_json(std::cout, data_container.get_child("0"));
         if (itr > numPoints)
         {
             std::cout << "Iterate Past End!" << std::endl;
         }
     }
-    std::cout << "End Iters" << std::endl;
+    std::cout << "Data Read" << std::endl;
+    int nn = 1;
+    int* result = new int[dim*numPoints];
+    float * dists = new float[numPoints*nn];
+    float speedup;
+
+
+    flann_index_t index_id;
+    //set Parameters
+    FLANNParameters p;
+    p = DEFAULT_FLANN_PARAMETERS;
+    p.algorithm = FLANN_INDEX_KDTREE;
+
+
+    index_id = flann_build_index(xyz,numPoints,dim,&speedup,&p);
+    flann_find_nearest_neighbors_index(index_id, t_xyz, t_numPoints, result, dists, nn, &p);
+    //flann_find_nearest_neighbors(xyz,numPoints, dim, t_xyz, t_numPoints, result, dists, nn, &p);
     
+    delete[] xyz;
+    delete[] result;
+    delete[] dists;
     
     
     
