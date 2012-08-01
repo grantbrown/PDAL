@@ -259,14 +259,15 @@ int PcQuery::execute()
 
     flann_index_t index_id;
     //set Parameters
-    FLANNParameters p;
-    p = DEFAULT_FLANN_PARAMETERS;
-    p.algorithm = FLANN_INDEX_KDTREE;
+    struct FLANNParameters p = DEFAULT_FLANN_PARAMETERS; 
+    p.algorithm=KDTREE;
+    p.target_precision = 0.9;
 
 
-    index_id = flann_build_index(xyz,numPoints,dim,&speedup,&p);
-    flann_find_nearest_neighbors_index(index_id, t_xyz, t_numPoints, result, dists, nn, &p);
-    //flann_find_nearest_neighbors(xyz,numPoints, dim, t_xyz, t_numPoints, result, dists, nn, &p);
+
+    //index_id = flann_build_index(xyz,numPoints,dim,&speedup,&p);
+    //flann_find_nearest_neighbors_index(index_id, t_xyz, t_numPoints, result, dists, nn, &p);
+    flann::flann_find_nearest_neighbors(xyz,numPoints, dim, t_xyz, t_numPoints, result, dists, nn, &p);
     
     delete[] xyz;
     delete[] result;
