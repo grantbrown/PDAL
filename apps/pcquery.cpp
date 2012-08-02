@@ -60,6 +60,11 @@
 #include <geos_c.h>
 
 
+extern "C" 
+{
+        struct FLANNParameters DEFAULT_FLANN_PARAMETERS;
+}
+
 namespace pcquery
 {
     static void _GEOSErrorHandler(const char *fmt, ...)
@@ -257,17 +262,22 @@ int PcQuery::execute()
     float speedup;
 
 
+    //Index<L2<float> > index(xyz, flann::KDTreeIndexParams(4));
+    //index.buildIndex();
+    //
+
+    struct FLANNParameters p;
     flann_index_t index_id;
+
+    p = DEFAULT_FLANN_PARAMETERS;
+   
+
     //set Parameters
-    struct FLANNParameters p = DEFAULT_FLANN_PARAMETERS; 
-    p.algorithm=KDTREE;
-    p.target_precision = 0.9;
+    //struct FLANNParameters p = DEFAULT_FLANN_PARAMETERS; 
+    //p.algorithm=KDTREE;
+    //p.target_precision = 0.9;
 
-
-
-    //index_id = flann_build_index(xyz,numPoints,dim,&speedup,&p);
-    //flann_find_nearest_neighbors_index(index_id, t_xyz, t_numPoints, result, dists, nn, &p);
-    flann::flann_find_nearest_neighbors(xyz,numPoints, dim, t_xyz, t_numPoints, result, dists, nn, &p);
+    //flann::flann_find_nearest_neighbors(xyz,numPoints, dim, t_xyz, t_numPoints, result, dists, nn, &p);
     
     delete[] xyz;
     delete[] result;
