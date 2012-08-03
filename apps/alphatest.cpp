@@ -52,6 +52,7 @@
 #include "AppSupport.hpp"
 #include "Application.hpp"
 #include <cstdarg>
+#include <math.h>
 
 
 
@@ -185,6 +186,7 @@ int AlphaShapeQuery::execute()
 
     Stage* stage = AppSupport::makeReader(readerOptions);
     stage -> initialize();
+    int pointbuffersize = 1000;
 #endif
 
 
@@ -198,10 +200,11 @@ int AlphaShapeQuery::execute()
     boost::uint64_t numPoints = stage->getNumPoints();
     std::cout << numPoints << std::endl;
     const Schema& schema = stage->getSchema();
-    PointBuffer* data = new PointBuffer(schema, 1);
+    PointBuffer* data = new PointBuffer(schema, pointbuffersize);
     //PointBuffer data(schema, 0);
     boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(stage->createSequentialIterator(*data));
     //boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(filter->createSequentialIterator(*data));
+
 
 
     int dim = 3;
@@ -222,41 +225,123 @@ int AlphaShapeQuery::execute()
     int _x;
     int _y;
     int _z;
+    
+    bool first = true;
+    std::cout << "Reading Data and Calculating Extremes" << std::endl;
+
     while (!((**iter).atEnd()))
     {
         (**iter).read(*data);
-        xyz[itr] =   (data -> getField<boost::int32_t>(dimx,0));
-        xyz[itr+1] = (data -> getField<boost::int32_t>(dimy,0));
-        xyz[itr+2] = (data -> getField<boost::int32_t>(dimz,0));
-        if (itr == 0)
-        {
-            xmin = xyz[itr];
-            xmax = xmin; 
-            ymin = xyz[itr+1];
-            ymax = ymin;
-            zmin = xyz[itr + 2];
-            zmax = zmin;
-        }
-        else
-        {
-            _x = xyz[itr];
-            _y = xyz[itr + 1];
-            _z = xyz[itr + 2];
 
-            if (_x > xmax){xmax = _x;}
-            else if (_x < xmin){xmin = _x;}
-            if (_y > ymax){ymax = _y;}
-            else if (_y < ymin){ymin = _y;}
-            if (_z > zmax){zmax = _z;}
-            else if (_z < zmin){zmin = _z;} 
+        for (boost::uint32_t i = 0; i < (data -> getNumPoints())-1; i ++)
+        {
+ 
+            xyz[itr*(pointbuffersize-1) + i*3] =   (data -> getField<boost::int32_t>(dimx,i));
+            xyz[itr*(pointbuffersize-1) + i*3 +1] = (data -> getField<boost::int32_t>(dimy,i));
+            xyz[itr*(pointbuffersize-1) + i*3 + 2] = (data -> getField<boost::int32_t>(dimz,i));
+
+            if (!first)
+            {
+                _x = xyz[itr*(pointbuffersize-1) + i*3];
+                _y = xyz[itr*(pointbuffersize-1) + i*3 + 1];
+                _z = xyz[itr*(pointbuffersize-1) + i*3 + 2]; 
+                if (_x > xmax){xmax = _x;}
+                else if (_x < xmin){xmin = _x;}
+                if (_y > ymax){ymax = _y;}
+                else if (_y < ymin){ymin = _y;}
+                if (_z > zmax){zmax = _z;}
+                else if (_z < zmin){zmin = _z;} 
+            }
+        }
+        if (first)
+        {
+            first = false;
+            xmin = xyz[0];
+            xmax = xmin; 
+            ymin = xyz[1];
+            ymax = ymin;
+            zmin = xyz[2];
+            zmax = zmin;
+
         }
         itr ++;
     }
-    std::cout << "Data Read" << std::endl;
-
+    std::cout << "Extremes:" << std::endl;
     std::cout << "X: " << xmin << ", " << xmax << std::endl;
     std::cout << "Y: " << ymin << ", " << ymax << std::endl;
     std::cout << "Z: " << zmin << ", " << zmax << std::endl;
+
+    std::cout << "Building Bins" << std::endl;
+    double xdensity = (static_cast<double>(numPoints))/(static_cast<double>(xmax-xmin));
+    double ydensity = (static_cast<double>(numPoints))/(static_cast<double>(ymax-ymin));
+    double zdensity = (static_cast<double>(numPoints))/(static_cast<double>(zmax-zmin));
+
+    std::cout << "X Density: " << xdensity << std::endl;
+    std::cout << "Y Density: " << ydensity << std::endl;
+    std::cout << "Z Density: " << zdensity << std::endl;
+
+    double xinterval = 10000/xdensity;
+    double yinterval = 10000/ydensity;
+    double zinterval = 10000/zdensity;
+
+    std::cout << "...x interval: " << xinterval << std::endl;
+    std::cout << "...y interval: " << yinterval << std::endl;
+    std::cout << "...z interval: " << zinterval << std::endl;
+ 
+    int xbins = (xmax-xmin)/(xinterval);
+    int ybins = (xmax-xmin)/(yinterval);
+    int zbins = (xmax-xmin)/(zinterval);
+
+    std::cout << "...x bins: " << xbins << std::endl;
+    std::cout << "...y bins: " << ybins << std::endl;
+    std::cout << "...z bins: " << zbins << std::endl;
+
+    
+    std::vector<boost::uint32_t> point_bin_membership;
+    point_bin_membership.resize(numPoints);
+    
+    std::vector<boost::uint32_t> point_bins;
+    point_bins.resize(xbins * ybins * zbins);
+    std::cout << "...Initializing Bins" << std::endl;
+    for (int i = 0; i < xbins*ybins*zbins; i ++)
+    {
+        point_bins[i] = 0;
+    }
+    std::cout << "...Bins Initialized" << std::endl;
+
+    boost::uint32_t _xidx;
+    boost::uint32_t _yidx;
+    boost::uint32_t _zidx;
+    boost::uint32_t idx;
+
+    for (boost::uint32_t i = 0; i<numPoints; i++)
+    {
+        _x = xyz[i*3];
+        _y = xyz[i*3 + 1];
+        _z = xyz[i*3 + 2];
+        _xidx = static_cast<boost::uint32_t>(floor((xyz[i*3] - xmin)/xinterval)); 
+        _yidx = static_cast<boost::uint32_t>(floor((xyz[i*3 + 1] - ymin)/yinterval)); 
+        _zidx = static_cast<boost::uint32_t>(floor((xyz[i*3 + 2] - zmin)/zinterval)); 
+        idx = _xidx + _yidx*xbins + _zidx*xbins*ybins;
+        if (idx > xbins*ybins*zbins)
+        {
+            std::cout << "Bad Index: " << idx << std::endl;
+            std::cout << "...X Index: " << _xidx << std::endl;
+            std::cout << "...Y Index: " << _yidx << std::endl;
+            std::cout << "...Z Index: " << _zidx << std::endl;
+            std::cout << "...Point Number: " << i << std::endl;
+
+
+        }
+        point_bin_membership[i] = idx;
+        point_bins[idx] += 1;
+    }
+    std::cout << "Bins Populated." << std::endl;
+
+
+
+
+
 
     //boost::property_tree::ptree stats_tree = static_cast<pdal::filters::iterators::sequential::Stats*>(iter->get())->toPTree();
     //boost::property_tree::ptree tree;
