@@ -63,7 +63,7 @@
 #include <geos_c.h>
 
 
-namespace pcquery
+namespace alphatest
 {
     static void _GEOSErrorHandler(const char *fmt, ...)
     {
@@ -96,10 +96,10 @@ namespace pcquery
 using namespace pdal;
 
 
-class PcQuery : public Application
+class AlphaShapeQuery : public Application
 {
 public:
-    PcQuery(int argc, char* argv[]);
+    AlphaShapeQuery(int argc, char* argv[]);
     int execute(); // overrride
 
 private:
@@ -119,7 +119,7 @@ private:
 };
 
 
-PcQuery::PcQuery(int argc, char* argv[])
+AlphaShapeQuery::AlphaShapeQuery(int argc, char* argv[])
     : Application(argc, argv, "pcquery")
     , m_inputFile("")
 {
@@ -127,30 +127,17 @@ PcQuery::PcQuery(int argc, char* argv[])
 }
 
 
-void PcQuery::validateSwitches()
+void AlphaShapeQuery::validateSwitches()
 {
     
     if (m_inputFile == "")
     {
         throw app_usage_error("--input/-i required");
     }
-    if (m_wkt.size())
-    {
-#ifdef PDAL_HAVE_GEOS
-        // read the WKT using GEOS
-        m_geosEnvironment = initGEOS_r(pcquery::_GEOSWarningHandler, pcquery::_GEOSErrorHandler);
-        GEOSWKTReader* reader = GEOSWKTReader_create_r(m_geosEnvironment);
-        GEOSGeometry* geom = GEOSWKTReader_read_r(m_geosEnvironment, reader, m_wkt.c_str());
-        if (!geom)
-            throw app_runtime_error("unable to ingest given WKT string");
-#endif
-            
-    }
     return;
 }
 
-
-void PcQuery::addSwitches()
+void AlphaShapeQuery::addSwitches()
 {
     namespace po = boost::program_options;
 
@@ -180,7 +167,7 @@ void PcQuery::addSwitches()
 
 
 
-int PcQuery::execute()
+int AlphaShapeQuery::execute()
 {
     using namespace flann;
     using boost::lexical_cast;
@@ -196,14 +183,6 @@ int PcQuery::execute()
 #ifdef PDAL_HAVE_FLANN
 
     Stage* stage = AppSupport::makeReader(readerOptions);
-
-
-
-    /*    
-    flann::Matrix<float> X = new float[npts];
-    flann::Matrix<float> Y = new float[npts];
-    flann::Matrix<float> Z = new float[npts];
-    */
 #endif
 
 
@@ -221,20 +200,6 @@ int PcQuery::execute()
     //PointBuffer data(schema, 0);
     boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(stage->createSequentialIterator(*data));
 
-
-    /*GET INFORMATION FROM WKT HERE*/
-    int t_numPoints = 1;
-
-     float* t_xyz = new float[3];
-     t_xyz[0] = 0.0;
-     t_xyz[1] = 0.0;
-     t_xyz[2] = 0.0;
-
-
-
-
-    /*END TEST WKT CODE*/
-    
     int dim = 3;
     std::vector<float> xyz;
     xyz.resize(numPoints*dim);
@@ -254,34 +219,8 @@ int PcQuery::execute()
     }
     std::cout << "Data Read" << std::endl;
 
-
-    int nn = 1;
-    std::vector<float> distances;
-    distances.resize(t_numPoints*nn);
-    std::vector<int> indices;
-    indices.resize(t_numPoints*nn);
-    
-
-    flann::Matrix<int> k_indices_mat (&indices[0], 1, t_numPoints*nn);
-    flann::Matrix<float> k_distances_mat (&distances[0], 1, t_numPoints*nn);
-
-    flann::Matrix<float>* flannData = new flann::Matrix<float>(&xyz[0], numPoints, dim);
-    flann::Index<flann::L2<float> >* flannIndex = new flann::Index<flann::L2<float> >(*flannData, flann::KDTreeIndexParams(4));
-    flannIndex -> buildIndex();
-
-    flannIndex -> knnSearch (flann::Matrix<float> (&t_xyz[0], 1,dim),
-                            k_indices_mat, k_distances_mat, t_numPoints*nn, flann::SearchParams(128));
-
-
-
-
     
     delete[] &xyz;
-    //delete[] result;
-    //delete[] dists;
-    
-    
-    
     std::cout << std::endl;
     
 
@@ -301,7 +240,7 @@ int PcQuery::execute()
 
 int main(int argc, char* argv[])
 {
-    PcQuery app(argc, argv);
+    AlphaShapeQuery app(argc, argv);
     return app.run();
 }
 
