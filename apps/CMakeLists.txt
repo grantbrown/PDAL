@@ -25,6 +25,7 @@ set(PC2PC pc2pc)
 set(PCINFO pcinfo)
 set(PCPIPELINE pcpipeline)
 set(PCQUERY pcquery)
+set(ALPHATEST alphatest)
 
 set(COMMON_APP_SOURCES Application.cpp Application.hpp AppSupport.cpp AppSupport.hpp)
 
@@ -62,7 +63,10 @@ if(PCQUERY)
     add_executable(${PCQUERY} pcquery.cpp ${COMMON_APP_SOURCES})
     target_link_libraries(${PCQUERY} ${PDAL_LIB_NAME} ${Boost_LIBRARIES})
 endif()
-
+if(ALPHATEST)
+    add_executable(${ALPHATEST} alphatest.cpp ${COMMON_APP_SOURCES})
+    target_link_libraries(${ALPHATEST} ${PDAL_LIB_NAME} ${Boost_LIBRARIES})
+endif()
 #------------------------------------------------------------------------------
 # Targets installation
 #------------------------------------------------------------------------------

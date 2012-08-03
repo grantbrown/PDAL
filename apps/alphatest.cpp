@@ -42,6 +42,7 @@
 #include <pdal/FileUtils.hpp>
 #include <pdal/PointBuffer.hpp>
 #include <pdal/filters/Index.hpp>
+#include <pdal/filters/Stats.hpp>
 
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -183,15 +184,16 @@ int AlphaShapeQuery::execute()
 #ifdef PDAL_HAVE_FLANN
 
     Stage* stage = AppSupport::makeReader(readerOptions);
+    stage -> initialize();
 #endif
 
 
 
     pdal::Options options = m_options + readerOptions;
     
-    pdal::filters::Index* filter = new pdal::filters::Index(*stage, options);
+    //pdal::filters::Stats* filter = new pdal::filters::Stats(*stage, options);
 
-    filter->initialize();
+    //filter->initialize();
 
     boost::uint64_t numPoints = stage->getNumPoints();
     std::cout << numPoints << std::endl;
@@ -199,18 +201,23 @@ int AlphaShapeQuery::execute()
     PointBuffer* data = new PointBuffer(schema, 1);
     //PointBuffer data(schema, 0);
     boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(stage->createSequentialIterator(*data));
+    //boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(filter->createSequentialIterator(*data));
+
 
     int dim = 3;
-    std::vector<float> xyz;
+    std::vector<boost::int32_t> xyz;
     xyz.resize(numPoints*dim);
    
+    Dimension const & dimx = schema.getDimension("X");
+    Dimension const & dimy = schema.getDimension("Y");
+    Dimension const & dimz = schema.getDimension("Z");
     boost::uint32_t itr = 0;
     while (!((**iter).atEnd()))
     {
         (**iter).read(*data);
-        xyz[itr] = lexical_cast<float>(data -> getField<boost::uint32_t>(schema.getDimension("X"),0));
-        xyz[itr+1] = lexical_cast<float>(data -> getField<boost::uint32_t>(schema.getDimension("Y"),0));
-        xyz[itr+2] = lexical_cast<float>(data -> getField<boost::uint32_t>(schema.getDimension("Z"),0));
+        xyz[itr] =   (data -> getField<boost::int32_t>(dimx,0));
+        xyz[itr+1] = (data -> getField<boost::int32_t>(dimy,0));
+        xyz[itr+2] = (data -> getField<boost::int32_t>(dimz,0));
         itr ++;
         if (itr > numPoints)
         {
@@ -219,19 +226,20 @@ int AlphaShapeQuery::execute()
     }
     std::cout << "Data Read" << std::endl;
 
+    //boost::property_tree::ptree stats_tree = static_cast<pdal::filters::iterators::sequential::Stats*>(iter->get())->toPTree();
+    //boost::property_tree::ptree tree;
+    //tree.add_child("stats", stats_tree);
+    //write_xml(std::cout, tree);
+    //std::cout << stats_tree.get<double>("X.minimum") << std::endl;    
+
     
-    delete[] &xyz;
+    //delete[] &xyz;
     std::cout << std::endl;
     
 
     delete iter;
-    delete filter;
+    //delete filter;
     delete stage;
-
-
-
-
-
 
     
     return 0;

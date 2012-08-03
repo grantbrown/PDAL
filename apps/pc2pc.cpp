@@ -163,6 +163,7 @@ int Pc2Pc::execute()
     writer->initialize();
 
     const boost::uint64_t numPointsToRead = stage->getNumPoints();
+    std::cout << numPointsToRead << std::endl;
     boost::scoped_ptr<pdal::UserCallback> callback((numPointsToRead == 0) ? 
         (pdal::UserCallback*)(new HeartbeatCallback) :
         (pdal::UserCallback*)(new PercentageCallback));
