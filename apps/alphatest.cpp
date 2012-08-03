@@ -212,19 +212,51 @@ int AlphaShapeQuery::execute()
     Dimension const & dimy = schema.getDimension("Y");
     Dimension const & dimz = schema.getDimension("Z");
     boost::uint32_t itr = 0;
+
+    int xmin;
+    int ymin;
+    int zmin;
+    int xmax;
+    int ymax;
+    int zmax;
+    int _x;
+    int _y;
+    int _z;
     while (!((**iter).atEnd()))
     {
         (**iter).read(*data);
         xyz[itr] =   (data -> getField<boost::int32_t>(dimx,0));
         xyz[itr+1] = (data -> getField<boost::int32_t>(dimy,0));
         xyz[itr+2] = (data -> getField<boost::int32_t>(dimz,0));
-        itr ++;
-        if (itr > numPoints)
+        if (itr == 0)
         {
-            std::cout << "Iterate Past End!" << std::endl;
+            xmin = xyz[itr];
+            xmax = xmin; 
+            ymin = xyz[itr+1];
+            ymax = ymin;
+            zmin = xyz[itr + 2];
+            zmax = zmin;
         }
+        else
+        {
+            _x = xyz[itr];
+            _y = xyz[itr + 1];
+            _z = xyz[itr + 2];
+
+            if (_x > xmax){xmax = _x;}
+            else if (_x < xmin){xmin = _x;}
+            if (_y > ymax){ymax = _y;}
+            else if (_y < ymin){ymin = _y;}
+            if (_z > zmax){zmax = _z;}
+            else if (_z < zmin){zmin = _z;} 
+        }
+        itr ++;
     }
     std::cout << "Data Read" << std::endl;
+
+    std::cout << "X: " << xmin << ", " << xmax << std::endl;
+    std::cout << "Y: " << ymin << ", " << ymax << std::endl;
+    std::cout << "Z: " << zmin << ", " << zmax << std::endl;
 
     //boost::property_tree::ptree stats_tree = static_cast<pdal::filters::iterators::sequential::Stats*>(iter->get())->toPTree();
     //boost::property_tree::ptree tree;
