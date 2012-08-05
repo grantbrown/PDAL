@@ -198,7 +198,6 @@ int AlphaShapeQuery::execute()
     //filter->initialize();
 
     boost::uint64_t numPoints = stage->getNumPoints();
-    std::cout << numPoints << std::endl;
     const Schema& schema = stage->getSchema();
     PointBuffer* data = new PointBuffer(schema, pointbuffersize);
     //PointBuffer data(schema, 0);
@@ -210,6 +209,10 @@ int AlphaShapeQuery::execute()
     int dim = 3;
     std::vector<boost::int32_t> xyz;
     xyz.resize(numPoints*dim);
+    for (boost::uint32_t i = 0; i < numPoints*dim; i ++)
+    {
+        xyz[i] = 9999;
+    }
    
     Dimension const & dimx = schema.getDimension("X");
     Dimension const & dimy = schema.getDimension("Y");
@@ -228,23 +231,39 @@ int AlphaShapeQuery::execute()
     
     bool first = true;
     std::cout << "Reading Data and Calculating Extremes" << std::endl;
-
+    int k;
+    int idx1 = 0;
+    int idx2;
+    int idx3;
     while (!((**iter).atEnd()))
     {
         (**iter).read(*data);
 
-        for (boost::uint32_t i = 0; i < (data -> getNumPoints())-1; i ++)
+        for (boost::uint32_t i = 0; i < (data -> getNumPoints()); i ++)
         {
- 
-            xyz[itr*(pointbuffersize-1) + i*3] =   (data -> getField<boost::int32_t>(dimx,i));
-            xyz[itr*(pointbuffersize-1) + i*3 +1] = (data -> getField<boost::int32_t>(dimy,i));
-            xyz[itr*(pointbuffersize-1) + i*3 + 2] = (data -> getField<boost::int32_t>(dimz,i));
+            _x = (data -> getField<boost::int32_t>(dimx,i));
+            _y = (data -> getField<boost::int32_t>(dimy,i));
+            _z = (data -> getField<boost::int32_t>(dimz,i));
 
+            idx2 = idx1 + 1;
+            idx3 = idx2 + 1;
+
+            xyz[idx1] = _x; 
+            xyz[idx2] = _y;
+            xyz[idx3] = _z;
+
+            if ((xyz[idx1] == 9999) ||  (xyz[idx2] == 9999) || (xyz[idx3] == 9999))
+            {
+                std::cout << "Bad Point: " << std::endl;
+                std::cout << "Index: " << idx1 << ", " << idx2 << ", " << idx3 << std::endl;
+                std::cout << xyz[idx1] << ", " << xyz[idx2] << ", " << xyz[idx3] << std::endl;
+                std::cout << _x << ", " << _y << ", " <<  _z << std::endl; 
+            }
             if (!first)
             {
-                _x = xyz[itr*(pointbuffersize-1) + i*3];
-                _y = xyz[itr*(pointbuffersize-1) + i*3 + 1];
-                _z = xyz[itr*(pointbuffersize-1) + i*3 + 2]; 
+                _x = xyz[idx1];
+                _y = xyz[idx2];
+                _z = xyz[idx3]; 
                 if (_x > xmax){xmax = _x;}
                 else if (_x < xmin){xmin = _x;}
                 if (_y > ymax){ymax = _y;}
@@ -252,7 +271,9 @@ int AlphaShapeQuery::execute()
                 if (_z > zmax){zmax = _z;}
                 else if (_z < zmin){zmin = _z;} 
             }
+            idx1 += 3;
         }
+
         if (first)
         {
             first = false;
@@ -264,8 +285,8 @@ int AlphaShapeQuery::execute()
             zmax = zmin;
 
         }
-        itr ++;
     }
+    std::cout << "Total Iterations: " << idx1 << std::endl;
     std::cout << "Extremes:" << std::endl;
     std::cout << "X: " << xmin << ", " << xmax << std::endl;
     std::cout << "Y: " << ymin << ", " << ymax << std::endl;
@@ -314,14 +335,15 @@ int AlphaShapeQuery::execute()
     boost::uint32_t _zidx;
     boost::uint32_t idx;
 
+    std::cout << "Filling Bins, numPoints = " << numPoints << std::endl;
     for (boost::uint32_t i = 0; i<numPoints; i++)
     {
         _x = xyz[i*3];
         _y = xyz[i*3 + 1];
         _z = xyz[i*3 + 2];
-        _xidx = static_cast<boost::uint32_t>(floor((xyz[i*3] - xmin)/xinterval)); 
-        _yidx = static_cast<boost::uint32_t>(floor((xyz[i*3 + 1] - ymin)/yinterval)); 
-        _zidx = static_cast<boost::uint32_t>(floor((xyz[i*3 + 2] - zmin)/zinterval)); 
+        _xidx = static_cast<boost::uint32_t>(floor((_x - xmin)/xinterval)); 
+        _yidx = static_cast<boost::uint32_t>(floor((_y - ymin)/yinterval)); 
+        _zidx = static_cast<boost::uint32_t>(floor((_z - zmin)/zinterval)); 
         idx = _xidx + _yidx*xbins + _zidx*xbins*ybins;
         if (idx > xbins*ybins*zbins)
         {
@@ -329,12 +351,16 @@ int AlphaShapeQuery::execute()
             std::cout << "...X Index: " << _xidx << std::endl;
             std::cout << "...Y Index: " << _yidx << std::endl;
             std::cout << "...Z Index: " << _zidx << std::endl;
+            std::cout << "...X: " << _x << std::endl;
+            std::cout << "...Y: " << _y << std::endl;
+            std::cout << "...Z: " << _x << std::endl;
             std::cout << "...Point Number: " << i << std::endl;
 
 
         }
         point_bin_membership[i] = idx;
         point_bins[idx] += 1;
+
     }
     std::cout << "Bins Populated." << std::endl;
 
