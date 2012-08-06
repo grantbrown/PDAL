@@ -64,7 +64,7 @@ if(PCQUERY)
     target_link_libraries(${PCQUERY} ${PDAL_LIB_NAME} ${Boost_LIBRARIES})
 endif()
 if(ALPHATEST)
-    add_executable(${ALPHATEST} alphatest.cpp ${COMMON_APP_SOURCES})
+    add_executable(${ALPHATEST} alphatest.cpp SparseGrid.cpp ${COMMON_APP_SOURCES})
     target_link_libraries(${ALPHATEST} ${PDAL_LIB_NAME} ${Boost_LIBRARIES})
 endif()
 #------------------------------------------------------------------------------

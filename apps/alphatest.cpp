@@ -53,8 +53,7 @@
 #include "Application.hpp"
 #include <cstdarg>
 #include <math.h>
-
-
+#include "SparseGrid.hpp"
 
 
 #ifdef PDAL_HAVE_FLANN
@@ -193,31 +192,15 @@ int AlphaShapeQuery::execute()
 
     pdal::Options options = m_options + readerOptions;
     
-    //pdal::filters::Stats* filter = new pdal::filters::Stats(*stage, options);
-
-    //filter->initialize();
-
     boost::uint64_t numPoints = stage->getNumPoints();
     const Schema& schema = stage->getSchema();
     PointBuffer* data = new PointBuffer(schema, pointbuffersize);
-    //PointBuffer data(schema, 0);
-    boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(stage->createSequentialIterator(*data));
-    //boost::scoped_ptr<StageSequentialIterator>* iter = new boost::scoped_ptr<StageSequentialIterator>(filter->createSequentialIterator(*data));
-
-
+    boost::scoped_ptr<StageRandomIterator>* iter = new boost::scoped_ptr<StageRandomIterator>(stage->createRandomIterator(*data));
 
     int dim = 3;
-    std::vector<boost::int32_t> xyz;
-    xyz.resize(numPoints*dim);
-    for (boost::uint32_t i = 0; i < numPoints*dim; i ++)
-    {
-        xyz[i] = 9999;
-    }
-   
     Dimension const & dimx = schema.getDimension("X");
     Dimension const & dimy = schema.getDimension("Y");
     Dimension const & dimz = schema.getDimension("Z");
-    boost::uint32_t itr = 0;
 
     int xmin;
     int ymin;
@@ -231,11 +214,52 @@ int AlphaShapeQuery::execute()
     
     bool first = true;
     std::cout << "Reading Data and Calculating Extremes" << std::endl;
-    int k;
-    int idx1 = 0;
-    int idx2;
-    int idx3;
-    while (!((**iter).atEnd()))
+    boost::uint64_t itrs = 0;
+    while (itrs < numPoints)
+    {
+        (**iter).read(*data);
+
+        for (boost::uint32_t i = 0; i < (data -> getNumPoints()); i ++)
+        {
+            itrs += 1;
+            _x = (data -> getField<boost::int32_t>(dimx,i));
+            _y = (data -> getField<boost::int32_t>(dimy,i));
+            _z = (data -> getField<boost::int32_t>(dimz,i));
+
+            if (!first)
+            {
+                if (_x > xmax){xmax = _x;}
+                else if (_x < xmin){xmin = _x;}
+                if (_y > ymax){ymax = _y;}
+                else if (_y < ymin){ymin = _y;}
+                if (_z > zmax){zmax = _z;}
+                else if (_z < zmin){zmin = _z;} 
+            }
+        }
+        if (first)
+        {
+            first = false;
+            xmin = _x; 
+            xmax = xmin; 
+            ymin = _y; 
+            ymax = ymin;
+            zmin = _z; 
+            zmax = zmin;
+        }
+    }
+    std::cout << "Extremes:" << std::endl;
+    std::cout << "X: " << xmin << ", " << xmax << std::endl;
+    std::cout << "Y: " << ymin << ", " << ymax << std::endl;
+    std::cout << "Z: " << zmin << ", " << zmax << std::endl;
+
+    std::cout << "Building Grid:" << std::endl;
+    SparseGrid* grid = new SparseGrid(xmin, ymin, zmin, 
+                                     xmax, ymax, zmax,
+                                     numPoints);
+    (**iter).seek(0); 
+
+    itrs = 0;
+    while (itrs < numPoints)
     {
         (**iter).read(*data);
 
@@ -244,130 +268,11 @@ int AlphaShapeQuery::execute()
             _x = (data -> getField<boost::int32_t>(dimx,i));
             _y = (data -> getField<boost::int32_t>(dimy,i));
             _z = (data -> getField<boost::int32_t>(dimz,i));
-
-            idx2 = idx1 + 1;
-            idx3 = idx2 + 1;
-
-            xyz[idx1] = _x; 
-            xyz[idx2] = _y;
-            xyz[idx3] = _z;
-
-            if ((xyz[idx1] == 9999) ||  (xyz[idx2] == 9999) || (xyz[idx3] == 9999))
-            {
-                std::cout << "Bad Point: " << std::endl;
-                std::cout << "Index: " << idx1 << ", " << idx2 << ", " << idx3 << std::endl;
-                std::cout << xyz[idx1] << ", " << xyz[idx2] << ", " << xyz[idx3] << std::endl;
-                std::cout << _x << ", " << _y << ", " <<  _z << std::endl; 
-            }
-            if (!first)
-            {
-                _x = xyz[idx1];
-                _y = xyz[idx2];
-                _z = xyz[idx3]; 
-                if (_x > xmax){xmax = _x;}
-                else if (_x < xmin){xmin = _x;}
-                if (_y > ymax){ymax = _y;}
-                else if (_y < ymin){ymin = _y;}
-                if (_z > zmax){zmax = _z;}
-                else if (_z < zmin){zmin = _z;} 
-            }
-            idx1 += 3;
-        }
-
-        if (first)
-        {
-            first = false;
-            xmin = xyz[0];
-            xmax = xmin; 
-            ymin = xyz[1];
-            ymax = ymin;
-            zmin = xyz[2];
-            zmax = zmin;
-
+            grid -> insertPoint(_x, _y, _z, itrs);
+            itrs += 1;
         }
     }
-    std::cout << "Total Iterations: " << idx1 << std::endl;
-    std::cout << "Extremes:" << std::endl;
-    std::cout << "X: " << xmin << ", " << xmax << std::endl;
-    std::cout << "Y: " << ymin << ", " << ymax << std::endl;
-    std::cout << "Z: " << zmin << ", " << zmax << std::endl;
-
-    std::cout << "Building Bins" << std::endl;
-    double xdensity = (static_cast<double>(numPoints))/(static_cast<double>(xmax-xmin));
-    double ydensity = (static_cast<double>(numPoints))/(static_cast<double>(ymax-ymin));
-    double zdensity = (static_cast<double>(numPoints))/(static_cast<double>(zmax-zmin));
-
-    std::cout << "X Density: " << xdensity << std::endl;
-    std::cout << "Y Density: " << ydensity << std::endl;
-    std::cout << "Z Density: " << zdensity << std::endl;
-
-    double xinterval = 10000/xdensity;
-    double yinterval = 10000/ydensity;
-    double zinterval = 10000/zdensity;
-
-    std::cout << "...x interval: " << xinterval << std::endl;
-    std::cout << "...y interval: " << yinterval << std::endl;
-    std::cout << "...z interval: " << zinterval << std::endl;
- 
-    int xbins = (xmax-xmin)/(xinterval);
-    int ybins = (xmax-xmin)/(yinterval);
-    int zbins = (xmax-xmin)/(zinterval);
-
-    std::cout << "...x bins: " << xbins << std::endl;
-    std::cout << "...y bins: " << ybins << std::endl;
-    std::cout << "...z bins: " << zbins << std::endl;
-
-    
-    std::vector<boost::uint32_t> point_bin_membership;
-    point_bin_membership.resize(numPoints);
-    
-    std::vector<boost::uint32_t> point_bins;
-    point_bins.resize(xbins * ybins * zbins);
-    std::cout << "...Initializing Bins" << std::endl;
-    for (int i = 0; i < xbins*ybins*zbins; i ++)
-    {
-        point_bins[i] = 0;
-    }
-    std::cout << "...Bins Initialized" << std::endl;
-
-    boost::uint32_t _xidx;
-    boost::uint32_t _yidx;
-    boost::uint32_t _zidx;
-    boost::uint32_t idx;
-
-    std::cout << "Filling Bins, numPoints = " << numPoints << std::endl;
-    for (boost::uint32_t i = 0; i<numPoints; i++)
-    {
-        _x = xyz[i*3];
-        _y = xyz[i*3 + 1];
-        _z = xyz[i*3 + 2];
-        _xidx = static_cast<boost::uint32_t>(floor((_x - xmin)/xinterval)); 
-        _yidx = static_cast<boost::uint32_t>(floor((_y - ymin)/yinterval)); 
-        _zidx = static_cast<boost::uint32_t>(floor((_z - zmin)/zinterval)); 
-        idx = _xidx + _yidx*xbins + _zidx*xbins*ybins;
-        if (idx > xbins*ybins*zbins)
-        {
-            std::cout << "Bad Index: " << idx << std::endl;
-            std::cout << "...X Index: " << _xidx << std::endl;
-            std::cout << "...Y Index: " << _yidx << std::endl;
-            std::cout << "...Z Index: " << _zidx << std::endl;
-            std::cout << "...X: " << _x << std::endl;
-            std::cout << "...Y: " << _y << std::endl;
-            std::cout << "...Z: " << _x << std::endl;
-            std::cout << "...Point Number: " << i << std::endl;
-
-
-        }
-        point_bin_membership[i] = idx;
-        point_bins[idx] += 1;
-
-    }
-    std::cout << "Bins Populated." << std::endl;
-
-
-
-
-
+    std::cout << "Grid Built." << std::endl;
 
     //boost::property_tree::ptree stats_tree = static_cast<pdal::filters::iterators::sequential::Stats*>(iter->get())->toPTree();
     //boost::property_tree::ptree tree;
@@ -378,13 +283,9 @@ int AlphaShapeQuery::execute()
     
     //delete[] &xyz;
     std::cout << std::endl;
-    
 
     delete iter;
-    //delete filter;
     delete stage;
-
-    
     return 0;
 }
 
