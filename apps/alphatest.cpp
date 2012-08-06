@@ -272,7 +272,19 @@ int AlphaShapeQuery::execute()
             itrs += 1;
         }
     }
-    std::cout << "Grid Built." << std::endl;
+    std::cout << "Grid Built, Retrieving Points." << std::endl;
+
+    std::stack<boost::uint64_t>* goodpoints = grid -> getValidPoints();
+
+    
+    //test code:
+    int good_points = 0;
+    while (!(goodpoints -> empty()))
+    {
+        goodpoints -> pop();
+        good_points += 1;
+    }
+    std::cout << "Keeping Points: " << good_points << std::endl;
 
     //boost::property_tree::ptree stats_tree = static_cast<pdal::filters::iterators::sequential::Stats*>(iter->get())->toPTree();
     //boost::property_tree::ptree tree;

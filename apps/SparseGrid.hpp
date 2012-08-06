@@ -24,7 +24,7 @@ class SparseGrid
         int insertPoint(boost::int32_t X, boost::int32_t Y, boost::int32_t Z, boost::int64_t point_idx);
         int getIndex(int xidx, int yidx, int zidx);
         bool isValid(int xidx, int yidx, int zidx);
-        int getValidPoints(int* goodPointIndices);
+        std::stack<boost::uint64_t>* getValidPoints();
 
         std::vector<SparseGridNode*>* grid; 
 
