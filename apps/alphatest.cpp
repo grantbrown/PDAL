@@ -110,6 +110,7 @@ private:
     boost::uint64_t numPoints;
 
     std::string m_inputFile;
+    std::string m_outputFile;
     std::string m_wkt;
 
 #ifdef PDAL_HAVE_GEOS
@@ -121,7 +122,7 @@ private:
 
 
 AlphaShapeQuery::AlphaShapeQuery(int argc, char* argv[])
-    : Application(argc, argv, "pcquery")
+    : Application(argc, argv, "alphatest")
     , m_inputFile("")
 {
     return;
@@ -135,6 +136,10 @@ void AlphaShapeQuery::validateSwitches()
     {
         throw app_usage_error("--input/-i required");
     }
+    if (m_outputFile == "")
+    {
+        throw app_usage_error("--output/-o required");
+    }
     return;
 }
 
@@ -147,6 +152,7 @@ void AlphaShapeQuery::addSwitches()
 
     file_options->add_options()
         ("input,i", po::value<std::string>(&m_inputFile)->default_value(""), "input file name")
+        ("output,o", po::value<std::string>(&m_outputFile)->default_value(""), "output file name")
         ("point", po::value< std::vector<float> >()->multitoken(), "A 2d or 3d point to use for querying")
         ("wkt", po::value<std::string>(&m_wkt)->default_value(""), "WKT object to use for querying")
         ;
@@ -162,6 +168,8 @@ void AlphaShapeQuery::addSwitches()
     addSwitchSet(processing_options);
 
     addPositionalSwitch("input", 1);
+    addPositionalSwitch("output", 2);
+
 
     return;
 }
@@ -248,7 +256,7 @@ int AlphaShapeQuery::execute()
     std::cout << "Building Grid:" << std::endl;
     SparseGrid* grid = new SparseGrid(xmin, ymin, 
                                      xmax, ymax,
-                                     numPoints, 200);
+                                     numPoints, 100);
     (**iter).seek(0); 
 
     itrs = 0;

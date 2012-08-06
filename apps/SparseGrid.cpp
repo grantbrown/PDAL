@@ -77,7 +77,7 @@ bool SparseGrid::isValid(int xidx, int yidx)
             {
                 return(true);
             }
-            if ((((*grid)[getIndex(xidx + x, yidx + y)]) -> count) < 8)
+            if ((((*grid)[getIndex(xidx + x, yidx + y)]) -> count) == 0)
             {
                 return(true);
             }
