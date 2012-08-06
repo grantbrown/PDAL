@@ -12,49 +12,40 @@
 //Sparse Grid Implementation
 
 
-SparseGrid::SparseGrid(int _xmin, int _ymin, int _zmin,
-                       int _xmax, int _ymax, int _zmax,
-                       int _nPoints) 
+SparseGrid::SparseGrid(int _xmin, int _ymin,
+                       int _xmax, int _ymax,
+                       int _nPoints, int _dim_width) 
 {
     xmin = _xmin;
     xmax = _xmax;
     ymin = _ymin;
     ymax = _ymax;
-    zmin = _zmin;
-    zmax = _zmax;
     
     numPoints = _nPoints;
+    dim_width = _dim_width;
 
     xdensity = (static_cast<double>(numPoints))/(static_cast<double>(xmax-xmin));
     ydensity = (static_cast<double>(numPoints))/(static_cast<double>(ymax-ymin));
-    zdensity = (static_cast<double>(numPoints))/(static_cast<double>(zmax-zmin));
     
-    std::cout << "X,Y,Z Density: " << xdensity << ", " << ydensity << ", " << zdensity << std::endl;
+    std::cout << "X,YDensity: " << xdensity << ", " << ydensity <<  std::endl;
 
-    xinterval = (numPoints/50)/xdensity;
-    yinterval = (numPoints/50)/ydensity;
-    zinterval = (numPoints/50)/zdensity;
+    xinterval = (numPoints/dim_width)/xdensity;
+    yinterval = (numPoints/dim_width)/ydensity;
 
-    std::cout << "X,Y,Z Interval: " << xinterval << ", " << yinterval << ", " << zinterval << std::endl;
-
+    std::cout << "X,Y Interval: " << xinterval << ", " << yinterval << std::endl;
 
     xbins = (xmax - xmin)/(xinterval);    
     ybins = (ymax - ymin)/(yinterval);    
-    zbins = (zmax - zmin)/(zinterval);    
 
-    std::cout << "X,Y,Z Bins: " << xbins << ", " << ybins << ", " << zbins << std::endl;
-
+    std::cout << "X,Y Bins: " << xbins << ", " << ybins << std::endl;
 
     initializeGrid();
-
 }
 
 int SparseGrid::initializeGrid()
 {
-    // This is not very efficient, but the grid size is much smaller than 
-    // the point size.
     grid = new std::vector<SparseGridNode*>;
-    int gridsize = xbins*ybins*zbins;
+    int gridsize = xbins*ybins;
     grid -> resize(gridsize);
     // Initialize Grid
     std::cout << "Initializing Grid" << std::endl;
@@ -67,49 +58,43 @@ int SparseGrid::initializeGrid()
     return(0);
 }
 
-int SparseGrid::getIndex(int xidx, int yidx, int zidx)
+int SparseGrid::getIndex(int xidx, int yidx)
 {
-    return(xidx + yidx*xbins + zidx*xbins*ybins);
+    return(xidx + yidx*xbins);
 }
-bool SparseGrid::isValid(int xidx, int yidx, int zidx)
+bool SparseGrid::isValid(int xidx, int yidx)
 {
     for (int x = -1; x <= 1; x += 1)
     {
         for (int y = -1; y <= 1; y += 1)
         {
-            for (int z = -1; z <= 1; z += 1)
+            if (x == 0 && y == 0)
             {
-                if (x == 0 && y == 0 && z == 1)
-                {
-                    continue;
-                }
-                if ((xidx + x < 0) || (xidx + x >= xbins) ||
-                    (yidx + y < 0) || (yidx + y >= ybins) ||
-                    (zidx + z < 0) || (zidx + z >= zbins))
-                {
-                    return(true);
-                }
-                if ((((*grid)[getIndex(xidx + x, yidx + y, zidx + z)]) -> count) < 8)
-                {
-                    return(true);
-                }
+                continue;
+            }
+            if ((xidx + x < 0) || (xidx + x >= xbins) ||
+                (yidx + y < 0) || (yidx + y >= ybins))
+            {
+                return(true);
+            }
+            if ((((*grid)[getIndex(xidx + x, yidx + y)]) -> count) < 8)
+            {
+                return(true);
             }
         }
     }
     return(false);
 }
 
-int SparseGrid::insertPoint(boost::int32_t X, boost::int32_t Y, boost::int32_t Z, boost::int64_t point_idx)
+int SparseGrid::insertPoint(boost::int32_t X, boost::int32_t Y, boost::int64_t point_idx)
 {
     int _xidx = static_cast<boost::uint32_t>(floor((X-xmin)/xinterval));
     _xidx = _xidx < xbins ? _xidx : xbins-1;
     int _yidx = static_cast<boost::uint32_t>(floor((Y-ymin)/yinterval));
     _yidx = _yidx < ybins ? _yidx : ybins-1;
-    int _zidx = static_cast<boost::uint32_t>(floor((Z-zmin)/zinterval));
-    _zidx = _zidx < zbins ? _zidx : zbins-1;
-    int idx = getIndex(_xidx, _yidx, _zidx);
+    int idx = getIndex(_xidx, _yidx);
     SparseGridNode* gridnode = (*grid)[idx];
-    if (isValid(_xidx, _yidx, _zidx))
+    if (isValid(_xidx, _yidx))
     {
         gridnode -> count ++;
         gridnode -> point_stack -> push(point_idx);
@@ -123,20 +108,18 @@ std::stack<boost::uint64_t>* SparseGrid::getValidPoints()
     std::stack<boost::uint64_t>* outstack = new std::stack<boost::uint64_t>;
     for (int x = 0; x < xbins; x++)
     {
-        for (int y = 0; y < ybins; y++)
-        {
-            for (int z = 0; z < zbins; z++)
+    for (int y = 0; y < ybins; y++)
+    {
+            if (isValid(x,y))
             {
-                if (isValid(x,y,z))
+                SparseGridNode* gridnode = (*grid)[getIndex(x,y)];
+                while (!((gridnode -> point_stack) -> empty()))
                 {
-                    SparseGridNode* gridnode = (*grid)[getIndex(x,y,z)];
-                    while (!((gridnode -> point_stack) -> empty()))
-                    {
-                        outstack -> push((gridnode -> point_stack) -> top());
-                        (gridnode -> point_stack) -> pop();
-                    }
+                    outstack -> push((gridnode -> point_stack) -> top());
+                    (gridnode -> point_stack) -> pop();
                 }
             }
+
         }
     }
     return(outstack);

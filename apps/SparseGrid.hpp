@@ -17,23 +17,23 @@ struct SparseGridNode
 class SparseGrid 
 {
     public:
-        SparseGrid(int _xmin, int _ymin, int _zmin,
-                int _xmax, int _ymax, int _zmax,
-                int _nPoints);
+        SparseGrid(int _xmin, int _ymin,
+                int _xmax, int _ymax,
+                int _nPoints, int _dim_width = 50);
 
-        int insertPoint(boost::int32_t X, boost::int32_t Y, boost::int32_t Z, boost::int64_t point_idx);
-        int getIndex(int xidx, int yidx, int zidx);
-        bool isValid(int xidx, int yidx, int zidx);
+        int insertPoint(boost::int32_t X, boost::int32_t Y, boost::int64_t point_idx);
+        int getIndex(int xidx, int yidx);
+        bool isValid(int xidx, int yidx);
         std::stack<boost::uint64_t>* getValidPoints();
 
         std::vector<SparseGridNode*>* grid; 
 
-        int xmin; int ymin; int zmin; 
-        int xmax; int ymax; int zmax;
-        int xbins; int ybins; int zbins;
-        int numPoints;
-        double xdensity; double ydensity; double zdensity;
-        double xinterval; double yinterval; double zinterval;
+        int xmin; int ymin; 
+        int xmax; int ymax; 
+        int xbins; int ybins; 
+        int numPoints; int dim_width;
+        double xdensity; double ydensity;
+        double xinterval; double yinterval;
     private:
         int initializeGrid();
     

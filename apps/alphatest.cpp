@@ -210,7 +210,6 @@ int AlphaShapeQuery::execute()
     int zmax;
     int _x;
     int _y;
-    int _z;
     
     bool first = true;
     std::cout << "Reading Data and Calculating Extremes" << std::endl;
@@ -224,7 +223,6 @@ int AlphaShapeQuery::execute()
             itrs += 1;
             _x = (data -> getField<boost::int32_t>(dimx,i));
             _y = (data -> getField<boost::int32_t>(dimy,i));
-            _z = (data -> getField<boost::int32_t>(dimz,i));
 
             if (!first)
             {
@@ -232,8 +230,6 @@ int AlphaShapeQuery::execute()
                 else if (_x < xmin){xmin = _x;}
                 if (_y > ymax){ymax = _y;}
                 else if (_y < ymin){ymin = _y;}
-                if (_z > zmax){zmax = _z;}
-                else if (_z < zmin){zmin = _z;} 
             }
         }
         if (first)
@@ -243,19 +239,16 @@ int AlphaShapeQuery::execute()
             xmax = xmin; 
             ymin = _y; 
             ymax = ymin;
-            zmin = _z; 
-            zmax = zmin;
         }
     }
     std::cout << "Extremes:" << std::endl;
     std::cout << "X: " << xmin << ", " << xmax << std::endl;
     std::cout << "Y: " << ymin << ", " << ymax << std::endl;
-    std::cout << "Z: " << zmin << ", " << zmax << std::endl;
 
     std::cout << "Building Grid:" << std::endl;
-    SparseGrid* grid = new SparseGrid(xmin, ymin, zmin, 
-                                     xmax, ymax, zmax,
-                                     numPoints);
+    SparseGrid* grid = new SparseGrid(xmin, ymin, 
+                                     xmax, ymax,
+                                     numPoints, 200);
     (**iter).seek(0); 
 
     itrs = 0;
@@ -267,8 +260,7 @@ int AlphaShapeQuery::execute()
         {
             _x = (data -> getField<boost::int32_t>(dimx,i));
             _y = (data -> getField<boost::int32_t>(dimy,i));
-            _z = (data -> getField<boost::int32_t>(dimz,i));
-            grid -> insertPoint(_x, _y, _z, itrs);
+            grid -> insertPoint(_x, _y, itrs);
             itrs += 1;
         }
     }
