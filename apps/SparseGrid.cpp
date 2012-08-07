@@ -14,7 +14,7 @@
 
 SparseGrid::SparseGrid(int _xmin, int _ymin,
                        int _xmax, int _ymax,
-                       int _nPoints, int _dim_width) 
+                       boost::uint64_t _nPoints, int _dim_width) 
 {
     xmin = _xmin;
     xmax = _xmax;
@@ -65,9 +65,16 @@ int SparseGrid::initializeGrid()
 
 int SparseGrid::subset_and_regrid(int _dim_width)
 {
-    std::stack<SparseGridNode*>* good_nodes = getValidPointRefs();
+    boost::uint64_t* newsize = new boost::uint64_t;
+    std::stack<SparseGridNode*>* good_nodes = getValidPointRefs(newsize);
+    //for (int i = 0; i < xbins*ybins; i++)
+    //{
+    //    delete (*grid)[i];
+    //}
+    numPoints = *newsize;
     dim_width = _dim_width;
     set_bins();
+    
     initializeGrid();
     PointData* pt_dat;
     SparseGridNode* grd_node;
@@ -75,11 +82,17 @@ int SparseGrid::subset_and_regrid(int _dim_width)
     boost::int32_t y;
     boost::int64_t pt_idx;
 
+    int itrs = 0;
+    //Reinserting points...
+    std::cout << "Reinserting Points" << std::endl;
     while (!(good_nodes -> empty()))
     {
         grd_node = (good_nodes -> top());
-        while (!(grd_node -> point_stack) -> empty());
+        //std::cout << "Empty:" << ((grd_node -> point_stack) -> empty()) << std::endl;
+        //std::cout << "Not Empty:" << !((grd_node -> point_stack) -> empty()) << std::endl;
+        while (!((grd_node -> point_stack) -> empty()))
         {
+            //std::cout << itrs << std::endl;
             pt_dat = ((grd_node -> point_stack) -> top());
             x = pt_dat -> x;
             y = pt_dat -> y;
@@ -87,8 +100,10 @@ int SparseGrid::subset_and_regrid(int _dim_width)
             insertPoint(x,y,pt_idx);
             ((grd_node -> point_stack) ->  pop());
         }
+        itrs += 1;
         (good_nodes -> pop());
     }
+    std::cout << "Points Inserted" << std::endl;
     return(0);
 }
 
@@ -138,8 +153,9 @@ int SparseGrid::insertPoint(boost::int32_t X, boost::int32_t Y, boost::int64_t p
     return(0);
 }
 
-std::stack<SparseGridNode*>* SparseGrid::getValidPointRefs()
+std::stack<SparseGridNode*>* SparseGrid::getValidPointRefs(boost::uint64_t* count_ref)
 {
+    *count_ref = 0;
     std::stack<SparseGridNode*>* outstack = new std::stack<SparseGridNode*>;
     for (int x = 0; x < xbins; x++)
     {
@@ -149,6 +165,7 @@ std::stack<SparseGridNode*>* SparseGrid::getValidPointRefs()
             {
                 SparseGridNode* gridnode = (*grid)[getIndex(x,y)];
                 outstack -> push(gridnode);
+                (*count_ref) += ((gridnode -> point_stack) -> size());
             }
 
         }
@@ -180,10 +197,23 @@ std::stack<boost::uint64_t>* SparseGrid::getValidPointIdx()
     return(outstack);
 }
 
+SparseGrid::~SparseGrid()
+{
+    for (int i = 0; i < grid -> size(); i ++)
+    {
+        delete (*grid)[i];
+    }
+}
+
 //SparseGridNode Implementation
 
 SparseGridNode::SparseGridNode(int _count)
 {
     count = _count;
     point_stack = new std::stack<PointData*>;
+}
+
+SparseGridNode::~SparseGridNode()
+{
+    delete point_stack;
 }

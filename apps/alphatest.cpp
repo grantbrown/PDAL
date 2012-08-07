@@ -279,20 +279,24 @@ int AlphaShapeQuery::execute()
 
         for (boost::uint32_t i = 0; i < (data -> getNumPoints()); i ++)
         {
-            _x = (data -> getField<boost::int32_t>(dimx,i));
-            _y = (data -> getField<boost::int32_t>(dimy,i));
-            grid -> insertPoint(_x, _y, itrs);
+            //_x = (data -> getField<boost::int32_t>(dimx,i));
+            //_y = (data -> getField<boost::int32_t>(dimy,i));
+
+            grid -> insertPoint(
+            (data -> getField<boost::int32_t>(dimx,i)),
+            (data -> getField<boost::int32_t>(dimy,i)), itrs);
+
+            //grid -> insertPoint(memcpy(_x), memcpy(_y), itrs);
             itrs += 1;
         }
     }
     std::cout << "Grid Built, subsetting." << std::endl;
     
+
     grid -> subset_and_regrid(200);
 
-    
+    std::cout << "Getting New Valid Points" << std::endl; 
     std::stack<boost::uint64_t>* goodpoints = grid -> getValidPointIdx();
-
-    
 
     PointBuffer* outdata = new PointBuffer(schema, 1);
 
@@ -301,14 +305,16 @@ int AlphaShapeQuery::execute()
     boost::uint64_t good_point = 0;
     std::ofstream outfile;
     outfile.open("keep_indices.txt");
+    int itr = 0;
     while (!(goodpoints -> empty()))
     {
-        good_point = goodpoints -> top();
+        itr += 1;
+        //std::cout << "Writing Point: " << itr << std::endl;
+        good_point = goodpoints -> top(); 
         outfile << good_point << "\n";
         (**iter).seek(good_point); 
         (**iter).read(*outdata);
         //writer -> write();
-
         goodpoints -> pop();
     }
     
