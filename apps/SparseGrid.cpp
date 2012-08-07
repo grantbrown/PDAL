@@ -69,9 +69,25 @@ int SparseGrid::subset_and_regrid(int _dim_width)
     dim_width = _dim_width;
     set_bins();
     initializeGrid();
+    PointData* pt_dat;
+    SparseGridNode* grd_node;
+    boost::int32_t x;
+    boost::int32_t y;
+    boost::int64_t pt_idx;
+
     while (!(good_nodes -> empty()))
     {
-
+        grd_node = (good_nodes -> top());
+        while (!(grd_node -> point_stack) -> empty());
+        {
+            pt_dat = ((grd_node -> point_stack) -> top());
+            x = pt_dat -> x;
+            y = pt_dat -> y;
+            pt_idx = pt_dat -> pt_idx;
+            insertPoint(x,y,pt_idx);
+            ((grd_node -> point_stack) ->  pop());
+        }
+        (good_nodes -> pop());
     }
     return(0);
 }

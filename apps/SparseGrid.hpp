@@ -9,7 +9,6 @@ struct PointData
 {
     boost::int32_t x;
     boost::int32_t y;
-    boost::int32_t z;
     boost::int64_t pt_idx;
 };
 
