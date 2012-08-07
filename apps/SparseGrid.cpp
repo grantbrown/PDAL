@@ -14,7 +14,7 @@
 
 SparseGrid::SparseGrid(int _xmin, int _ymin,
                        int _xmax, int _ymax,
-                       boost::uint64_t _nPoints, int _dim_width) 
+                       boost::uint64_t _nPoints, int _tbins) 
 {
     xmin = _xmin;
     xmax = _xmax;
@@ -22,7 +22,8 @@ SparseGrid::SparseGrid(int _xmin, int _ymin,
     ymax = _ymax;
     
     numPoints = _nPoints;
-    dim_width = _dim_width;
+    tbins = _tbins;
+    //dim_width = _dim_width;
     
     set_bins();
     initializeGrid();
@@ -30,20 +31,39 @@ SparseGrid::SparseGrid(int _xmin, int _ymin,
 
 int SparseGrid::set_bins()
 {
-    xdensity = (static_cast<double>(numPoints))/(static_cast<double>(xmax-xmin));
-    ydensity = (static_cast<double>(numPoints))/(static_cast<double>(ymax-ymin));
     
-    std::cout << "X,YDensity: " << xdensity << ", " << ydensity <<  std::endl;
+    std::cout << "Setting Bins, target total = " << tbins << std::endl;
+    int xrange; int yrange;
+    xrange = (xmax-xmin);
+    yrange = (ymax-ymin);
 
-    xinterval = (numPoints/dim_width)/xdensity;
-    yinterval = (numPoints/dim_width)/ydensity;
+    xdensity = static_cast<double>(xrange)/static_cast<double>(xrange + yrange);
+    ydensity = static_cast<double>(yrange)/static_cast<double>(xrange + yrange);
 
-    std::cout << "X,Y Interval: " << xinterval << ", " << yinterval << std::endl;
+    xbins = floor(sqrt(tbins/(1/xdensity)-1));
+    ybins = floor(tbins/xbins);
 
-    xbins = (xmax - xmin)/(xinterval);    
-    ybins = (ymax - ymin)/(yinterval);    
+    std::cout << "X Bins: " << xbins << std::endl;
+    std::cout << "Y Bins: " << ybins << std::endl;
 
-    std::cout << "X,Y Bins: " << xbins << ", " << ybins << std::endl;
+    xinterval = static_cast<double>(xrange)/xbins;
+    yinterval = static_cast<double>(yrange)/ybins;
+
+
+    //xdensity = (static_cast<double>(numPoints))/(static_cast<double>(xmax-xmin));
+    //ydensity = (static_cast<double>(numPoints))/(static_cast<double>(ymax-ymin));
+    
+    //std::cout << "X,YDensity: " << xdensity << ", " << ydensity <<  std::endl;
+
+    //xinterval = (numPoints/dim_width)/xdensity;
+    //yinterval = (numPoints/dim_width)/ydensity;
+
+    //std::cout << "X,Y Interval: " << xinterval << ", " << yinterval << std::endl;
+
+    //xbins = (xmax - xmin)/(xinterval);    
+    //ybins = (ymax - ymin)/(yinterval);    
+
+    //std::cout << "X,Y Bins: " << xbins << ", " << ybins << std::endl;
     return(0);
 }
 
@@ -63,7 +83,7 @@ int SparseGrid::initializeGrid()
     return(0);
 }
 
-int SparseGrid::subset_and_regrid(int _dim_width)
+int SparseGrid::subset_and_regrid(int newbins)
 {
     boost::uint64_t* newsize = new boost::uint64_t;
     std::stack<SparseGridNode*>* good_nodes = getValidPointRefs(newsize);
@@ -72,7 +92,8 @@ int SparseGrid::subset_and_regrid(int _dim_width)
     //    delete (*grid)[i];
     //}
     numPoints = *newsize;
-    dim_width = _dim_width;
+    tbins = newbins;
+    //dim_width = _dim_width;
     set_bins();
     
     initializeGrid();
@@ -199,7 +220,7 @@ std::stack<boost::uint64_t>* SparseGrid::getValidPointIdx()
 
 SparseGrid::~SparseGrid()
 {
-    for (int i = 0; i < grid -> size(); i ++)
+    for (boost::uint32_t i = 0; i < grid -> size(); i ++)
     {
         delete (*grid)[i];
     }

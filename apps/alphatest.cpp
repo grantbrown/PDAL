@@ -269,7 +269,7 @@ int AlphaShapeQuery::execute()
     std::cout << "Building Grid:" << std::endl;
     SparseGrid* grid = new SparseGrid(xmin, ymin, 
                                      xmax, ymax,
-                                     numPoints, 100);
+                                     numPoints, 10000);
     (**iter).seek(0); 
 
     itrs = 0;
@@ -293,7 +293,11 @@ int AlphaShapeQuery::execute()
     std::cout << "Grid Built, subsetting." << std::endl;
     
 
-    grid -> subset_and_regrid(200);
+    grid -> subset_and_regrid(200*200);
+    grid -> subset_and_regrid(500*500);
+    grid -> subset_and_regrid(1000*1000);
+
+
 
     std::cout << "Getting New Valid Points" << std::endl; 
     std::stack<boost::uint64_t>* goodpoints = grid -> getValidPointIdx();
