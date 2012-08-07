@@ -5,13 +5,19 @@
 #include <boost/cstdint.hpp>
 
 
-
+struct PointData
+{
+    boost::int32_t x;
+    boost::int32_t y;
+    boost::int32_t z;
+    boost::int64_t pt_idx;
+};
 
 struct SparseGridNode
 {
     SparseGridNode(int _count);
     int count;
-    std::stack<boost::int64_t>* point_stack;
+    std::stack<PointData*>* point_stack;
 };
 
 class SparseGrid 
@@ -22,9 +28,13 @@ class SparseGrid
                 int _nPoints, int _dim_width = 50);
 
         int insertPoint(boost::int32_t X, boost::int32_t Y, boost::int64_t point_idx);
+        int subset_and_regrid(int _dim_width);
+        int set_bins();
+
         int getIndex(int xidx, int yidx);
         bool isValid(int xidx, int yidx);
-        std::stack<boost::uint64_t>* getValidPoints();
+        std::stack<SparseGridNode*>* getValidPointRefs();
+        std::stack<boost::uint64_t>* getValidPointIdx();
 
         std::vector<SparseGridNode*>* grid; 
 

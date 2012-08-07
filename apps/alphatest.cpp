@@ -34,7 +34,7 @@
 
 
 #include <iostream>
-
+#include <fstream>
 #include <boost/scoped_ptr.hpp>
 
 #include <pdal/Stage.hpp>
@@ -188,11 +188,24 @@ int AlphaShapeQuery::execute()
         readerOptions.add<bool>("debug", isDebug());
         readerOptions.add<boost::uint32_t>("verbose", getVerboseLevel());
     }
+    /*
+    Options writerOptions;
+    {
+        writerOptions.add<std::string>("filename", m_outputFile);
+        writerOptions.add<bool>("debug", isDebug());
+        writerOptions.add<boost::uint32_t>("verbose", getVerboseLevel());
+    }
+    */
 
 #ifdef PDAL_HAVE_FLANN
 
     Stage* stage = AppSupport::makeReader(readerOptions);
+
+
+    
+    //writer -> initialize();
     stage -> initialize();
+    //Writer* writer = AppSupport::makeWriter(readerOptions, *stage);
     int pointbuffersize = 1000;
 #endif
 
@@ -274,17 +287,27 @@ int AlphaShapeQuery::execute()
     }
     std::cout << "Grid Built, Retrieving Points." << std::endl;
 
-    std::stack<boost::uint64_t>* goodpoints = grid -> getValidPoints();
+    std::stack<boost::uint64_t>* goodpoints = grid -> getValidPointIdx();
 
     
+
+    PointBuffer* outdata = new PointBuffer(schema, 1);
+
     //test code:
-    int good_points = 0;
+    
+    boost::uint64_t good_point = 0;
+    std::ofstream outfile;
+    outfile.open("keep_indices.txt");
     while (!(goodpoints -> empty()))
     {
+        good_point = goodpoints -> top();
+        outfile << good_point << "\n";
+        (**iter).seek(good_point); 
+        (**iter).read(*outdata);
+        //writer -> write();
+
         goodpoints -> pop();
-        good_points += 1;
     }
-    std::cout << "Keeping Points: " << good_points << std::endl;
 
     //boost::property_tree::ptree stats_tree = static_cast<pdal::filters::iterators::sequential::Stats*>(iter->get())->toPTree();
     //boost::property_tree::ptree tree;
