@@ -248,9 +248,9 @@ int AlphaShapeQuery::execute()
             if (!first)
             {
                 if (_x > xmax){xmax = _x;}
-                else if (_x < xmin){xmin = _x;}
+                if (_x < xmin){xmin = _x;}
                 if (_y > ymax){ymax = _y;}
-                else if (_y < ymin){ymin = _y;}
+                if (_y < ymin){ymin = _y;}
             }
         }
         if (first)

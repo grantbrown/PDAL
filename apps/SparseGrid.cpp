@@ -158,9 +158,9 @@ bool SparseGrid::isValid(int xidx, int yidx)
 
 int SparseGrid::insertPoint(boost::int32_t X, boost::int32_t Y, boost::int64_t point_idx)
 {
-    int _xidx = static_cast<boost::uint32_t>(floor((X-xmin)/xinterval));
+    boost::uint32_t _xidx = static_cast<boost::uint32_t>(floor((X-xmin)/xinterval));
     _xidx = _xidx < xbins ? _xidx : xbins-1;
-    int _yidx = static_cast<boost::uint32_t>(floor((Y-ymin)/yinterval));
+    boost::uint32_t _yidx = static_cast<boost::uint32_t>(floor((Y-ymin)/yinterval));
     _yidx = _yidx < ybins ? _yidx : ybins-1;
     int idx = getIndex(_xidx, _yidx);
     SparseGridNode* gridnode = (*grid)[idx];
