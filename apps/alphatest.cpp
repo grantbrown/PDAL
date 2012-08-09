@@ -55,13 +55,25 @@
 #include <math.h>
 #include "SparseGrid.hpp"
 
-
-#ifdef PDAL_HAVE_FLANN
-#include <flann/flann.hpp>
-#endif
-
 #ifdef PDAL_HAVE_GEOS
 #include <geos_c.h>
+
+
+#include <pcl/ModelCoefficients.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/surface/concave_hull.h>
+
+
+
+
+
+
+
 
 
 namespace alphatest
@@ -178,7 +190,7 @@ void AlphaShapeQuery::addSwitches()
 
 int AlphaShapeQuery::execute()
 {
-    using namespace flann;
+
     using boost::lexical_cast;
     Options readerOptions;
     {
@@ -197,8 +209,6 @@ int AlphaShapeQuery::execute()
     }
     */
 
-#ifdef PDAL_HAVE_FLANN
-
     Stage* stage = AppSupport::makeReader(readerOptions);
 
 
@@ -207,7 +217,7 @@ int AlphaShapeQuery::execute()
     stage -> initialize();
     //Writer* writer = AppSupport::makeWriter(readerOptions, *stage);
     int pointbuffersize = 1000;
-#endif
+
 
 
 
@@ -231,7 +241,7 @@ int AlphaShapeQuery::execute()
     int zmax;
     int _x;
     int _y;
-    
+    int _z;    
     bool first = true;
     std::cout << "Reading Data and Calculating Extremes" << std::endl;
     boost::uint64_t itrs = 0;
@@ -310,17 +320,29 @@ int AlphaShapeQuery::execute()
     std::ofstream outfile;
     outfile.open("keep_indices.txt");
     int itr = 0;
+    pcl::PointCloud<pcl::PointXYZ> cloud;
+    cloud.points.resize(goodpoints -> size());
     while (!(goodpoints -> empty()))
     {
-        itr += 1;
+
         //std::cout << "Writing Point: " << itr << std::endl;
         good_point = goodpoints -> top(); 
         outfile << good_point << "\n";
         (**iter).seek(good_point); 
         (**iter).read(*outdata);
+        _x = (data -> getField<boost::int32_t>(dimx,itr));
+        _y = (data -> getField<boost::int32_t>(dimy,itr));
+        _z = (data -> getField<boost::int32_t>(dimz,itr)); 
+        cloud.points[itr].x = _x;
+        cloud.points[itr].y = _y;
+        cloud.points[itr].z = _z;
+        itr += 1;
         //writer -> write();
         goodpoints -> pop();
     }
+
+
+    
     
     //boost::property_tree::ptree stats_tree = static_cast<pdal::filters::iterators::sequential::Stats*>(iter->get())->toPTree();
     //boost::property_tree::ptree tree;

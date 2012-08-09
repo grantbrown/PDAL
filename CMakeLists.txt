@@ -415,6 +415,7 @@ endif()
 
 # Points2Grid
 # Points2Grid support - optional, default=OFF
+
 set(WITH_P2G FALSE CACHE BOOL "Choose if Points2Grid support should be built")
 
 if(WITH_P2G)
@@ -426,6 +427,17 @@ if(WITH_P2G)
         set(PDAL_HAVE_P2G 1)
     endif()
 endif()
+
+set(WITH_PCL TRUE CACHE BOOL "Choose if PCL support should be built")
+
+if(WITH_PCL)
+    find_package(PCL 1.6 REQUIRED COMPONENTS common io)
+    include_directories(${PCL_INCLUDE_DIRS})
+    link_directories(${PCL_LIBRARY_DIRS})
+    add_definitions(${PCL_DEFINITIONS})
+    set(PDAL_HAVE_PCL 1)
+endif()
+
 
 
 if(WITH_FREEGLUT)

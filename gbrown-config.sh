@@ -1,0 +1,33 @@
+USR_LOCAL="/usr/local"
+USR="/usr"
+TIFF_HOME=$USR_LOCAL
+LASZIP_HOME=$USR_LOCAL
+LIBXML2_HOME=$USR_LOCAL
+GEOTIFF_HOME=$USR_LOCAL
+SO_EXT=so
+EMBED=OFF
+CC=clang
+CXX=clang++
+
+cmake   -G "Unix Makefiles"  \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_INSTALL_PREFIX=/home/gbrown/dev/PDAL-fork/build \
+        -DPDAL_EMBED_BOOST=OFF \
+        -DWITH_GDAL=ON \
+        -DWITH_ICONV=ON \
+        -DWITH_ORACLE=OFF \
+        -DWITH_GEOTIFF=ON \
+        -DWITH_LASZIP=ON \
+        -DWITH_LIBXML2=ON \
+        -DWITH_PYTHON=ON \
+        -DWITH_FLANN=ON \
+        -DBOOST_ROOT=/usr/local/boost_1_49_0/ \
+        -DGEOTIFF_INCLUDE_DIR=${GEOTIFF_HOME}/include/ \
+        -DGEOTIFF_LIBRARY=${GEOTIFF_HOME}/lib/libgeotiff.${SO_EXT} \
+        -DICONV_INCLUDE_DIR=/usr/include \
+        -DLASZIP_INCLUDE_DIR=/usr/local/include\
+        -DLASZIP_LIBRARY=/usr/local/lib/liblaszip.${SO_EXT} \
+        -DLIBXML2_INCLUDE_DIR=${LIBXML2_HOME}/include/libxml2 \
+        -DLIBXML2_LIBRARIES=${LIBXML2_HOME}/lib/libxml2.${SO_EXT} \
+        -DTIFF_INCLUDE_DIR=/${TIFF_HOME}/include \
+        -DTIFF_LIBRARY=${TIFF_HOME}/lib/libtiff.${SO_EXT}
