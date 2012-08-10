@@ -431,7 +431,8 @@ endif()
 set(WITH_PCL TRUE CACHE BOOL "Choose if PCL support should be built")
 
 if(WITH_PCL)
-    find_package(PCL 1.6 REQUIRED COMPONENTS common io)
+    find_package(PCL 1.6 REQUIRED COMPONENTS common io segmentation 
+                surface filters sample_consensus filters)
     include_directories(${PCL_INCLUDE_DIRS})
     link_directories(${PCL_LIBRARY_DIRS})
     add_definitions(${PCL_DEFINITIONS})

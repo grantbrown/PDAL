@@ -32,7 +32,6 @@
 * OF SUCH DAMAGE.
 ****************************************************************************/
 
-
 #include <iostream>
 #include <fstream>
 #include <boost/scoped_ptr.hpp>
@@ -58,22 +57,15 @@
 #ifdef PDAL_HAVE_GEOS
 #include <geos_c.h>
 
-
 #include <pcl/ModelCoefficients.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/filters/passthrough.h>
+#include <pcl/filters/project_inliers.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/surface/concave_hull.h>
-
-
-
-
-
-
-
 
 
 namespace alphatest
@@ -224,14 +216,15 @@ int AlphaShapeQuery::execute()
     pdal::Options options = m_options + readerOptions;
     
     boost::uint64_t numPoints = stage->getNumPoints();
-    const Schema& schema = stage->getSchema();
-    PointBuffer* data = new PointBuffer(schema, pointbuffersize);
+    const Schema& stage_schema = stage->getSchema();
+    PointBuffer* data = new PointBuffer(stage_schema, pointbuffersize);
     boost::scoped_ptr<StageRandomIterator>* iter = new boost::scoped_ptr<StageRandomIterator>(stage->createRandomIterator(*data));
+    const Schema& buffer_schema = data->getSchema();
 
     int dim = 3;
-    Dimension const & dimx = schema.getDimension("X");
-    Dimension const & dimy = schema.getDimension("Y");
-    Dimension const & dimz = schema.getDimension("Z");
+    Dimension const & dimx = buffer_schema.getDimension("X");
+    Dimension const & dimy = buffer_schema.getDimension("Y");
+    Dimension const & dimz = buffer_schema.getDimension("Z");
 
     int xmin;
     int ymin;
@@ -312,38 +305,97 @@ int AlphaShapeQuery::execute()
     std::cout << "Getting New Valid Points" << std::endl; 
     std::stack<boost::uint64_t>* goodpoints = grid -> getValidPointIdx();
 
-    PointBuffer* outdata = new PointBuffer(schema, 1);
+    PointBuffer* outdata = new PointBuffer(buffer_schema, 1);
+    const Schema& buffer_schema_2 = outdata->getSchema();
 
-    //test code:
+    Dimension const & dimx2 = buffer_schema_2.getDimension("X");
+    Dimension const & dimy2 = buffer_schema_2.getDimension("Y");
+    Dimension const & dimz2 = buffer_schema_2.getDimension("Z");
     
     boost::uint64_t good_point = 0;
-    std::ofstream outfile;
-    outfile.open("keep_indices.txt");
+    //std::ofstream outfile;
+    //outfile.open("keep_indices.txt");
     int itr = 0;
     pcl::PointCloud<pcl::PointXYZ> cloud;
     cloud.points.resize(goodpoints -> size());
+    boost::int32_t lastx;
+    boost::int32_t lasty;
+    int badpts = 0;
+    lastx = 0;
+    lasty = 0;
+    
     while (!(goodpoints -> empty()))
     {
 
         //std::cout << "Writing Point: " << itr << std::endl;
         good_point = goodpoints -> top(); 
-        outfile << good_point << "\n";
+        //outfile << good_point << "\n";
         (**iter).seek(good_point); 
         (**iter).read(*outdata);
-        _x = (data -> getField<boost::int32_t>(dimx,itr));
-        _y = (data -> getField<boost::int32_t>(dimy,itr));
-        _z = (data -> getField<boost::int32_t>(dimz,itr)); 
+        _x = (outdata -> getField<boost::int32_t>(dimx2,0));
+        _y = (outdata -> getField<boost::int32_t>(dimy2,0));
+        _z = (outdata -> getField<boost::int32_t>(dimz2,0)); 
         cloud.points[itr].x = _x;
         cloud.points[itr].y = _y;
-        cloud.points[itr].z = _z;
+        cloud.points[itr].z = 0.5;
+        if (lastx == _x){badpts += 1;}
+
+        lastx = _x;
+        lasty = _y;
+        //std::cout << good_point << "(X,Y,Z): (" << cloud.points[itr].x << ", " << cloud.points[itr].y << ", " << cloud.points[itr].z << ")" << std::endl;
         itr += 1;
-        //writer -> write();
+
         goodpoints -> pop();
     }
-
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr(&cloud), 
+                                        cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>),
+                                        cloud_projected (new pcl::PointCloud<pcl::PointXYZ>);
 
     
-    
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud(cloud_ptr);
+    pass.setFilterFieldName("z");
+    pass.setFilterLimits(0,1.1);
+    pass.filter(*cloud_filtered);
+
+    std::cout << cloud_filtered -> points.size() << std::endl;
+
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+
+    pcl::SACSegmentation<pcl::PointXYZ> seg;
+
+    seg.setOptimizeCoefficients(true);
+    seg.setModelType(pcl::SACMODEL_PLANE);
+    seg.setMethodType (pcl::SAC_RANSAC);
+    seg.setDistanceThreshold(10);
+    seg.setInputCloud(cloud_filtered -> makeShared());
+    seg.segment(*inliers, *coefficients);
+    std::cout << "After Segmentation: " << inliers -> indices.size() << std::endl;
+
+    std::cerr << "Model coefficients: " << coefficients->values[0] << " " 
+                                        << coefficients->values[1] << " "
+                                        << coefficients->values[2] << " " 
+                                        << coefficients->values[3] << std::endl;
+        
+    pcl::ProjectInliers<pcl::PointXYZ> proj;
+    proj.setModelType(pcl::SACMODEL_PLANE);
+    proj.setInputCloud(cloud_filtered);
+    proj.setModelCoefficients(coefficients);
+    proj.filter(*cloud_projected);
+
+    std::cout << "After Projection: " << cloud_projected  -> points.size() << std::endl;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull(new pcl::PointCloud<pcl::PointXYZ>);
+
+    pcl::ConcaveHull<pcl::PointXYZ> chull;
+    chull.setInputCloud(cloud_projected);
+    chull.setAlpha(0.1);
+    chull.setDimension(2);
+    chull.reconstruct(*cloud_hull);
+    std::cout << "Concave hull has: " << cloud_hull -> points.size() << std::endl;
+
+
+
     //boost::property_tree::ptree stats_tree = static_cast<pdal::filters::iterators::sequential::Stats*>(iter->get())->toPTree();
     //boost::property_tree::ptree tree;
     //tree.add_child("stats", stats_tree);
@@ -354,8 +406,19 @@ int AlphaShapeQuery::execute()
     //delete[] &xyz;
     std::cout << std::endl;
 
+    delete &(*coefficients);
+    delete &(*inliers);
+    delete &(*cloud_ptr);
+    delete &(*cloud_filtered);
+    delete &(*cloud_projected);
+    delete data;
+    delete outdata;
     delete iter;
+    std::cout << "S1" << std::endl;
+
     delete stage;
+    std::cout << "S2" << std::endl;
+
     return 0;
 }
 
