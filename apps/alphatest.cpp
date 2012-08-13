@@ -192,6 +192,8 @@ int AlphaShapeQuery::execute()
         readerOptions.add<bool>("debug", isDebug());
         readerOptions.add<boost::uint32_t>("verbose", getVerboseLevel());
     }
+
+
     /*
     Options writerOptions;
     {
@@ -313,74 +315,43 @@ int AlphaShapeQuery::execute()
     Dimension const & dimz2 = buffer_schema_2.getDimension("Z");
     
     boost::uint64_t good_point = 0;
-    //std::ofstream outfile;
-    //outfile.open("keep_indices.txt");
     int itr = 0;
-    pcl::PointCloud<pcl::PointXYZ> cloud;
-    cloud.points.resize(goodpoints -> size());
-    boost::int32_t lastx;
-    boost::int32_t lasty;
-    int badpts = 0;
-    lastx = 0;
-    lasty = 0;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr (new pcl::PointCloud<pcl::PointXYZ>);
+
+    (*cloud_ptr).points.resize(goodpoints -> size());
     
     while (!(goodpoints -> empty()))
     {
-
-        //std::cout << "Writing Point: " << itr << std::endl;
         good_point = goodpoints -> top(); 
-        //outfile << good_point << "\n";
         (**iter).seek(good_point); 
         (**iter).read(*outdata);
         _x = (outdata -> getField<boost::int32_t>(dimx2,0));
         _y = (outdata -> getField<boost::int32_t>(dimy2,0));
         _z = (outdata -> getField<boost::int32_t>(dimz2,0)); 
-        cloud.points[itr].x = _x;
-        cloud.points[itr].y = _y;
-        cloud.points[itr].z = 0.5;
-        if (lastx == _x){badpts += 1;}
-
-        lastx = _x;
-        lasty = _y;
-        //std::cout << good_point << "(X,Y,Z): (" << cloud.points[itr].x << ", " << cloud.points[itr].y << ", " << cloud.points[itr].z << ")" << std::endl;
+        (*cloud_ptr).points[itr].x = _x;
+        (*cloud_ptr).points[itr].y = _y;
+        (*cloud_ptr).points[itr].z = 0.5;
         itr += 1;
-
         goodpoints -> pop();
     }
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr(&cloud), 
-                                        cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>),
-                                        cloud_projected (new pcl::PointCloud<pcl::PointXYZ>);
-
-    
-    pcl::PassThrough<pcl::PointXYZ> pass;
-    pass.setInputCloud(cloud_ptr);
-    pass.setFilterFieldName("z");
-    pass.setFilterLimits(0,1.1);
-    pass.filter(*cloud_filtered);
-
-    std::cout << cloud_filtered -> points.size() << std::endl;
-
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_projected (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-
     pcl::SACSegmentation<pcl::PointXYZ> seg;
-
     seg.setOptimizeCoefficients(true);
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setMethodType (pcl::SAC_RANSAC);
     seg.setDistanceThreshold(10);
-    seg.setInputCloud(cloud_filtered -> makeShared());
+    seg.setInputCloud(cloud_ptr -> makeShared());
     seg.segment(*inliers, *coefficients);
     std::cout << "After Segmentation: " << inliers -> indices.size() << std::endl;
-
     std::cerr << "Model coefficients: " << coefficients->values[0] << " " 
                                         << coefficients->values[1] << " "
                                         << coefficients->values[2] << " " 
                                         << coefficients->values[3] << std::endl;
-        
     pcl::ProjectInliers<pcl::PointXYZ> proj;
     proj.setModelType(pcl::SACMODEL_PLANE);
-    proj.setInputCloud(cloud_filtered);
+    proj.setInputCloud(cloud_ptr);
     proj.setModelCoefficients(coefficients);
     proj.filter(*cloud_projected);
 
@@ -392,32 +363,18 @@ int AlphaShapeQuery::execute()
     chull.setAlpha(0.1);
     chull.setDimension(2);
     chull.reconstruct(*cloud_hull);
-    std::cout << "Concave hull has: " << cloud_hull -> points.size() << std::endl;
+    std::cout << "Concave hull has: " << cloud_hull -> points.size() << ". Writing to: " << m_outputFile << std::endl;
+
+
+    pcl::PCDWriter pclwriter;
+    pclwriter.write(m_outputFile, *cloud_hull, false);
 
 
 
-    //boost::property_tree::ptree stats_tree = static_cast<pdal::filters::iterators::sequential::Stats*>(iter->get())->toPTree();
-    //boost::property_tree::ptree tree;
-    //tree.add_child("stats", stats_tree);
-    //write_xml(std::cout, tree);
-    //std::cout << stats_tree.get<double>("X.minimum") << std::endl;    
-
-    
-    //delete[] &xyz;
-    std::cout << std::endl;
-
-    delete &(*coefficients);
-    delete &(*inliers);
-    delete &(*cloud_ptr);
-    delete &(*cloud_filtered);
-    delete &(*cloud_projected);
     delete data;
     delete outdata;
-    delete iter;
-    std::cout << "S1" << std::endl;
-
+    delete grid;
     delete stage;
-    std::cout << "S2" << std::endl;
 
     return 0;
 }
@@ -426,6 +383,6 @@ int AlphaShapeQuery::execute()
 int main(int argc, char* argv[])
 {
     AlphaShapeQuery app(argc, argv);
-    return app.run();
+    return(app.run());
 }
 
