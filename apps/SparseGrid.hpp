@@ -17,6 +17,7 @@ struct SparseGridNode
     SparseGridNode(int _count);
     ~SparseGridNode();
     int count;
+    void make_single();
     std::stack<PointData*>* point_stack;
 };
 

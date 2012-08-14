@@ -147,7 +147,7 @@ bool SparseGrid::isValid(int xidx, int yidx)
             {
                 return(true);
             }
-            if ((((*grid)[getIndex(xidx + x, yidx + y)]) -> count) == 0)
+            if ((((*grid)[getIndex(xidx + x, yidx + y)]) -> count) <= 1)
             {
                 return(true);
             }
@@ -182,11 +182,17 @@ std::stack<SparseGridNode*>* SparseGrid::getValidPointRefs(boost::uint64_t* coun
     {
     for (int y = 0; y < ybins; y++)
     {
+            SparseGridNode* gridnode = (*grid)[getIndex(x,y)];
             if (isValid(x,y))
             {
-                SparseGridNode* gridnode = (*grid)[getIndex(x,y)];
                 outstack -> push(gridnode);
                 (*count_ref) += ((gridnode -> point_stack) -> size());
+            }
+            else if (gridnode -> point_stack -> size() > 0)
+            {
+                gridnode -> make_single();
+                outstack -> push(gridnode);
+                (*count_ref) += 1;
             }
 
         }
@@ -232,6 +238,14 @@ SparseGridNode::SparseGridNode(int _count)
 {
     count = _count;
     point_stack = new std::stack<PointData*>;
+}
+
+void SparseGridNode::make_single()
+{
+    while (point_stack -> size() > 1)
+    {
+        point_stack -> pop();
+    }
 }
 
 SparseGridNode::~SparseGridNode()
