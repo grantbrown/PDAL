@@ -186,7 +186,7 @@ void AlphaShapeQuery::addSwitches()
         ("point", po::value< std::vector<float> >()->multitoken(), "A 2d or 3d point to use for querying")
         ("wkt", po::value<std::string>(&m_wkt)->default_value(""), "WKT object to use for querying")
         ("alpha,a", po::value<float>(&m_Alpha)->default_value(0.5), "Alpha Parameter")
-        ("nsub,n", po::value<int>(&m_subset)->default_value(3), "How many subset operations?")
+        ("nsub,n", po::value<int>(&m_subset)->default_value(8), "How many subset operations?")
 
 
         ;
@@ -326,11 +326,18 @@ int AlphaShapeQuery::execute()
     }
     std::cout << "Grid Built, subsetting." << std::endl;
     
+    boost::uint64_t cells = 0;
     for (int itr = 0; itr < m_subset; itr ++)
     {
-        grid -> subset_and_regrid((150 + 100*itr)*(150 + 100*itr));
+        cells = (150 + 100*itr)*(150 + 100*itr);
+        grid -> subset_and_regrid(cells); 
     }
+    //double density_alpha = (((xmax - xmin)*(ymax-ymin))/cells);
+    std::cout << "Xrange: " << (xmax - xmin) << std::endl;
+    std::cout << "Yrange: " << (ymax - ymin) << std::endl;
 
+    boost::uint64_t density_alpha = static_cast<boost::uint64_t>(sqrt((xmax - xmin))*sqrt((ymax-ymin))/(150*150));
+    std::cout << "Density Alpha: " << density_alpha << std::endl;
     std::cout << "Getting New Valid Points" << std::endl; 
     std::stack<boost::uint64_t>* goodpoints = grid -> getValidPointIdx();
 
@@ -392,6 +399,28 @@ int AlphaShapeQuery::execute()
 
     chull.setDimension(2);
     std::vector<pcl::Vertices>* polygons = new std::vector<pcl::Vertices>;
+    int csize = 0;
+    int mult = 1;
+    int scale = 0;
+    while (csize == 0)
+    {
+        for (float _a = 0.5; _a < 1; _a+=0.2)
+        {
+            chull.setAlpha(density_alpha * _a * mult + scale);
+            std::cout << "Alpha: " << density_alpha*_a*mult + scale << std::endl;
+            chull.reconstruct(*cloud_hull, *polygons);
+            chull.setInputCloud(cloud_hull);
+        }
+        csize = cloud_hull -> points.size();
+        if (csize == 0)
+        {
+            chull.setInputCloud(cloud_projected);
+            std::cout << "Alpha shape failed, doing magic." << std::endl;
+        }
+        mult += 100;
+        scale += 30000;
+    }
+    /*
     std::cout << "Alpha: " << m_Alpha << std::endl;
     chull.setAlpha(m_Alpha);
     chull.reconstruct(*cloud_hull, *polygons);
@@ -409,7 +438,7 @@ int AlphaShapeQuery::execute()
         //chull.setAlpha(m_Alpha);
         //chull.reconstruct(*cloud_hull, *polygons);
     }
-
+    */
     std::cout << "Concave hull has: " << cloud_hull -> points.size() << std::endl; 
     std::cout << "Polygon vec has size: " << polygons -> size() << std::endl;
     //for (int i = 0; i < polygons -> size(); i++)
