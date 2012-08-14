@@ -141,6 +141,7 @@ private:
     std::string m_outputFile;
     std::string m_wkt;
     float m_Alpha;
+    int m_subset;
 
 #ifdef PDAL_HAVE_GEOS
 	GEOSContextHandle_t m_geosEnvironment;
@@ -184,7 +185,9 @@ void AlphaShapeQuery::addSwitches()
         ("output,o", po::value<std::string>(&m_outputFile)->default_value(""), "output file name")
         ("point", po::value< std::vector<float> >()->multitoken(), "A 2d or 3d point to use for querying")
         ("wkt", po::value<std::string>(&m_wkt)->default_value(""), "WKT object to use for querying")
-        ("alpha", po::value<float>(&m_Alpha)->default_value(0.5), "Alpha Parameter")
+        ("alpha,a", po::value<float>(&m_Alpha)->default_value(0.5), "Alpha Parameter")
+        ("nsub,n", po::value<int>(&m_subset)->default_value(3), "How many subset operations?")
+
 
         ;
 
@@ -323,12 +326,10 @@ int AlphaShapeQuery::execute()
     }
     std::cout << "Grid Built, subsetting." << std::endl;
     
-
-    grid -> subset_and_regrid(200*200);
-    grid -> subset_and_regrid(500*500);
-    grid -> subset_and_regrid(1000*1000);
-
-
+    for (int itr = 0; itr < m_subset; itr ++)
+    {
+        grid -> subset_and_regrid((150 + 100*itr)*(150 + 100*itr));
+    }
 
     std::cout << "Getting New Valid Points" << std::endl; 
     std::stack<boost::uint64_t>* goodpoints = grid -> getValidPointIdx();
@@ -394,6 +395,20 @@ int AlphaShapeQuery::execute()
     std::cout << "Alpha: " << m_Alpha << std::endl;
     chull.setAlpha(m_Alpha);
     chull.reconstruct(*cloud_hull, *polygons);
+    if (cloud_hull -> points.size() == 0)
+    {
+        std::cout << "Warning, looks like pcl failed to make an alpha shape. Trying iterative approach." << std::endl;
+        for (int _alpha = 10000; _alpha >= 1000; _alpha -= 1000)
+        {
+            std::cout << "Trying alpha = " << _alpha << std::endl;
+            chull.setAlpha(_alpha);
+            chull.reconstruct(*cloud_hull, *polygons);
+            std::cout << "Concave hull has: " << cloud_hull -> points.size() << std::endl; 
+            chull.setInputCloud(cloud_hull);
+        }
+        //chull.setAlpha(m_Alpha);
+        //chull.reconstruct(*cloud_hull, *polygons);
+    }
 
     /*
     for (double alpha = 0.5; alpha <= 2.0; alpha += 0.5)
@@ -402,7 +417,7 @@ int AlphaShapeQuery::execute()
         chull.reconstruct(*cloud_hull, *polygons);
     }
     */
-    std::cout << "Concave hull has: " << cloud_hull -> points.size() << ". Writing to: " << m_outputFile << std::endl;
+    std::cout << "Concave hull has: " << cloud_hull -> points.size() << std::endl; 
     std::cout << "Polygon vec has size: " << polygons -> size() << std::endl;
     //for (int i = 0; i < polygons -> size(); i++)
     //{
@@ -456,6 +471,7 @@ int AlphaShapeQuery::execute()
         i ++;
     } 
 
+    std::cout << "Duplicates removed, performing nearest neighbors traversal." << std::endl;
     std::tr1::unordered_map<int, int> map;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(output_cloud_hull);
@@ -478,8 +494,6 @@ int AlphaShapeQuery::execute()
             //if (pointNkNDists[z] < threshold && pointNkNDists[z] != 0 && (map.count(pointIdxNkNSearch[z]) == 0))
             //if (pointNkNDists[z] != 0 && (map.count(pointIdxNkNSearch[z]) == 0))
             if ((map.count(pointIdxNkNSearch[z]) == 0))
-
-
             {
                 idx = pointIdxNkNSearch[z];
                 map[lastIdx] = idx;
@@ -504,6 +518,7 @@ int AlphaShapeQuery::execute()
     }
     map[lastIdx] = 0;
 
+    std::cout << "Writing to: " << m_outputFile << std::endl;
     idx = 0;
     lastIdx =-1;
     ofstream outfile;
@@ -569,7 +584,7 @@ int AlphaShapeQuery::execute()
     //pclwriter.write(m_outputFile, *output_cloud_hull, false);
     //pclwriter.write(m_outputFile, *cloud_hull, false);
 
-
+    delete filepath;
     delete data;
     delete outdata;
     delete grid;
