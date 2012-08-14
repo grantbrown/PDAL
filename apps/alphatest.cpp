@@ -52,11 +52,13 @@
 #include "Application.hpp"
 #include <cstdarg>
 #include <math.h>
+#include <tr1/unordered_map>
 #include "SparseGrid.hpp"
 
 #ifdef PDAL_HAVE_GEOS
 #include <geos_c.h>
 
+#include <iomanip>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
@@ -66,7 +68,29 @@
 #include <pcl/filters/project_inliers.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/surface/concave_hull.h>
+#include <pcl/kdtree/kdtree_flann.h>
 
+/*
+#include <sensor_msgs/PointCloud2.h>
+
+
+#include <pcl/visualization/common/common.h>
+#include <pcl/ros/conversions.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <vtkTextActor.h>
+#include <vtkTextProperty.h>
+#include <vtkCellData.h>
+#include <vtkWorldPointPicker.h>
+#include <vtkPropPicker.h>
+#include <vtkPlatonicSolidSource.h>
+#include <vtkLoopSubdivisionFilter.h>
+#include <vtkTriangle.h>
+#include <vtkTransform.h>
+#include <vtkVisibleCellSelector.h>
+#include <vtkSelection.h>
+#include <vtkPointPicker.h>
+#include <vtkSmartPointer.h>
+*/
 
 namespace alphatest
 {
@@ -78,7 +102,7 @@ namespace alphatest
         char buf[1024];  
 
         vsnprintf( buf, sizeof( buf), fmt, args);
-        std::cerr << "GEOS Error: " << buf << std::endl;
+        std::cout << "GEOS Error: " << buf << std::endl;
 
         va_end(args);
     }
@@ -116,6 +140,7 @@ private:
     std::string m_inputFile;
     std::string m_outputFile;
     std::string m_wkt;
+    float m_Alpha;
 
 #ifdef PDAL_HAVE_GEOS
 	GEOSContextHandle_t m_geosEnvironment;
@@ -159,6 +184,8 @@ void AlphaShapeQuery::addSwitches()
         ("output,o", po::value<std::string>(&m_outputFile)->default_value(""), "output file name")
         ("point", po::value< std::vector<float> >()->multitoken(), "A 2d or 3d point to use for querying")
         ("wkt", po::value<std::string>(&m_wkt)->default_value(""), "WKT object to use for querying")
+        ("alpha", po::value<float>(&m_Alpha)->default_value(0.5), "Alpha Parameter")
+
         ;
 
     addSwitchSet(file_options);
@@ -275,6 +302,7 @@ int AlphaShapeQuery::execute()
     SparseGrid* grid = new SparseGrid(xmin, ymin, 
                                      xmax, ymax,
                                      numPoints, 10000);
+
     (**iter).seek(0); 
 
     itrs = 0;
@@ -290,8 +318,6 @@ int AlphaShapeQuery::execute()
             grid -> insertPoint(
             (data -> getField<boost::int32_t>(dimx,i)),
             (data -> getField<boost::int32_t>(dimy,i)), itrs);
-
-            //grid -> insertPoint(memcpy(_x), memcpy(_y), itrs);
             itrs += 1;
         }
     }
@@ -320,17 +346,19 @@ int AlphaShapeQuery::execute()
 
     (*cloud_ptr).points.resize(goodpoints -> size());
     
+
     while (!(goodpoints -> empty()))
     {
         good_point = goodpoints -> top(); 
+
         (**iter).seek(good_point); 
         (**iter).read(*outdata);
         _x = (outdata -> getField<boost::int32_t>(dimx2,0));
         _y = (outdata -> getField<boost::int32_t>(dimy2,0));
-        _z = (outdata -> getField<boost::int32_t>(dimz2,0)); 
+        //_z = (outdata -> getField<boost::int32_t>(dimz2,0)); 
         (*cloud_ptr).points[itr].x = _x;
         (*cloud_ptr).points[itr].y = _y;
-        (*cloud_ptr).points[itr].z = 0.5;
+        //(*cloud_ptr).points[itr].z = _z;
         itr += 1;
         goodpoints -> pop();
     }
@@ -345,7 +373,7 @@ int AlphaShapeQuery::execute()
     seg.setInputCloud(cloud_ptr -> makeShared());
     seg.segment(*inliers, *coefficients);
     std::cout << "After Segmentation: " << inliers -> indices.size() << std::endl;
-    std::cerr << "Model coefficients: " << coefficients->values[0] << " " 
+    std::cout << "Model coefficients: " << coefficients->values[0] << " " 
                                         << coefficients->values[1] << " "
                                         << coefficients->values[2] << " " 
                                         << coefficients->values[3] << std::endl;
@@ -360,15 +388,186 @@ int AlphaShapeQuery::execute()
 
     pcl::ConcaveHull<pcl::PointXYZ> chull;
     chull.setInputCloud(cloud_projected);
-    chull.setAlpha(0.1);
+
     chull.setDimension(2);
-    chull.reconstruct(*cloud_hull);
+    std::vector<pcl::Vertices>* polygons = new std::vector<pcl::Vertices>;
+    std::cout << "Alpha: " << m_Alpha << std::endl;
+    chull.setAlpha(m_Alpha);
+    chull.reconstruct(*cloud_hull, *polygons);
+
+    /*
+    for (double alpha = 0.5; alpha <= 2.0; alpha += 0.5)
+    {
+        chull.setAlpha(alpha);
+        chull.reconstruct(*cloud_hull, *polygons);
+    }
+    */
     std::cout << "Concave hull has: " << cloud_hull -> points.size() << ". Writing to: " << m_outputFile << std::endl;
+    std::cout << "Polygon vec has size: " << polygons -> size() << std::endl;
+    //for (int i = 0; i < polygons -> size(); i++)
+    //{
+    //    std::cout << "Vertex " << i << ", size: " << (*polygons)[i].vertices.size() << std::endl;
+    //}
+    std::cout << "Chull dimension: " << chull.getDimension() << std::endl;
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_hull(new pcl::PointCloud<pcl::PointXYZ>);
+
+    boost::int32_t lastx;
+    boost::int32_t lasty;
+    boost::int32_t lastz;
+
+    _x = (*cloud_hull).points[0].x;
+    _y = (*cloud_hull).points[0].y;
+    //_z = (*cloud_hull).points[0].z;
+    std::stack<boost::int32_t>* outpts = new std::stack<boost::int32_t>;
+    outpts -> push(0);
+    lastx = _x;
+    lasty = _y;
+    //lastz = _z;
+    for (int i = 1; i < cloud_hull -> points.size(); i ++ )
+    {
+        _x = (*cloud_hull).points[i].x;
+        _y = (*cloud_hull).points[i].y;
+        //_z = (*cloud_hull).points[i].z;
+
+        //if ((_x != lastx) || (_y != lasty) || (_z != lastz)){
+        if ((_x != lastx) || (_y != lasty)){
+            outpts -> push(i);
+            lastx = _x;
+            lasty = _y; 
+            //lastz = _z;
+        }
+    }
+    int outsize = outpts -> size();
+    output_cloud_hull -> resize(outpts -> size());
+    boost::uint64_t pt_idx;
+    int i = 0;
+    while (! (outpts -> empty()))
+    {
+        pt_idx = outpts -> top();
+        _x = (*cloud_hull).points[pt_idx].x;
+        _y = (*cloud_hull).points[pt_idx].y;
+        //_z = (*cloud_hull).points[pt_idx].z;
+
+        output_cloud_hull -> points[i].x = _x; 
+        output_cloud_hull -> points[i].y = _y;         
+        //output_cloud_hull -> points[i].z = _z; 
+        outpts -> pop();
+        i ++;
+    } 
+
+    std::tr1::unordered_map<int, int> map;
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+    kdtree.setInputCloud(output_cloud_hull);
+    pcl::PointXYZ searchPoint;
+    int k = outsize-1;
+    std::vector<int> pointIdxNkNSearch(k);
+    std::vector<float> pointNkNDists(k);
+    int search_result;
+    //int threshold = 50000000;
+    int idx = 0;
+    int lastIdx = 0;
+    for (int j = 0; j < i; j++)
+    {
+
+        searchPoint.x = output_cloud_hull -> points[lastIdx].x;
+        searchPoint.y = output_cloud_hull -> points[lastIdx].y;
+        search_result = kdtree.nearestKSearch(searchPoint, k, pointIdxNkNSearch, pointNkNDists);
+        for (int z = 1; z < k; z++)
+        {
+            //if (pointNkNDists[z] < threshold && pointNkNDists[z] != 0 && (map.count(pointIdxNkNSearch[z]) == 0))
+            //if (pointNkNDists[z] != 0 && (map.count(pointIdxNkNSearch[z]) == 0))
+            if ((map.count(pointIdxNkNSearch[z]) == 0))
 
 
-    pcl::PCDWriter pclwriter;
-    pclwriter.write(m_outputFile, *cloud_hull, false);
+            {
+                idx = pointIdxNkNSearch[z];
+                map[lastIdx] = idx;
+                //std::cout << "Mapping Index " << lastIdx << " to " << idx << std::endl;
+                lastIdx = idx;
+                break;
+            }
+            if (z == k)
+            {
+                std::cout << "No Close Point Found For " << lastIdx << " NN Dists: (" << 
+                pointNkNDists[0] << ", " <<  
+                pointNkNDists[1] << ", " <<  
+                pointNkNDists[2] << ", " << 
+                pointNkNDists[3] << ")" << " Map Count is (" << 
+                map.count(pointIdxNkNSearch[0]) << ", " <<
+                map.count(pointIdxNkNSearch[1]) << ", " <<
+                map.count(pointIdxNkNSearch[2]) << ", " <<
+                map.count(pointIdxNkNSearch[3]) << ") " <<
+                std::endl;
+            }
+        }
+    }
+    map[lastIdx] = 0;
 
+    idx = 0;
+    lastIdx =-1;
+    ofstream outfile;
+    char* filepath = new char[m_outputFile.size() + 1];
+    filepath[m_outputFile.size() + 1] = 0;
+    memcpy(filepath, m_outputFile.c_str(), m_outputFile.size());
+    outfile.open(filepath);
+    outfile <<  fixed << setprecision(0);
+    outfile << "POLYGON((";
+    while(lastIdx != 0)
+    {
+        lastIdx = map[idx];
+        outfile << output_cloud_hull -> points[idx].x << " " << output_cloud_hull -> points[idx].y << ", " 
+                << output_cloud_hull -> points[lastIdx].x << " " << output_cloud_hull -> points[lastIdx].y 
+                << (lastIdx == 0 ? "))" : ",\n");
+        idx = lastIdx;
+    }
+    outfile.close();
+
+    /*
+
+
+    sensor_msgs::PointCloud2 msg_alpha;
+    pcl::toROSMsg(*cloud_hull, msg_alpha);
+    pcl::PolygonMesh mesh_alpha;
+    mesh_alpha.cloud = msg_alpha;
+    mesh_alpha.polygons = *polygons;
+    
+
+    //Code yanked from addPolylineFromPolygonMesh
+    // Can probably get rid of toROSMsg calls, and keep everything in pcl
+    vtkSmartPointer<vtkPoints> poly_points = vtkSmartPointer<vtkPoints>::New();
+    pcl::PointCloud<pcl::PointXYZ> point_cloud;
+    pcl::fromROSMsg (mesh_alpha.cloud, point_cloud);
+    poly_points -> SetNumberOfPoints(point_cloud.points.size());
+    size_t i;
+    for (i = 0; i < point_cloud.points.size(); ++i)
+    {
+        poly_points -> InsertPoint(i, point_cloud.points[i].x, point_cloud.points[i].y, point_cloud.points[i].z);
+    }
+    vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
+    vtkSmartPointer<vtkPolyData> polyData;
+    for (i =0; i < mesh_alpha.polygons.size(); i++)
+    {
+        vtkSmartPointer<vtkPolyLine> polyLine = vtkSmartPointer<vtkPolyLine>::New();
+        polyLine -> GetPointIds() -> SetNumberOfIds(mesh_alpha.polygons[i].vertices.size());
+        for (unsigned int k = 0; k < mesh_alpha.polygons[i].vertices.size(); k++)
+        {
+            polyLine -> GetPointIds() -> SetId(k, mesh_alpha.polygons[i].vertices[k]);
+        }
+        cells -> InsertNextCell(polyLine);
+    }
+    std::cout << poly_points -> size() << std::endl;
+    polyData -> SetPoints(poly_points);
+    polyData -> SetLines(cells);
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper -> SetInput(polyData);
+
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor -> SetMapper(mapper);
+    */
+    //pcl::PCDWriter pclwriter;
+    //pclwriter.write(m_outputFile, *output_cloud_hull, false);
+    //pclwriter.write(m_outputFile, *cloud_hull, false);
 
 
     delete data;
