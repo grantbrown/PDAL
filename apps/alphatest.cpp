@@ -410,13 +410,6 @@ int AlphaShapeQuery::execute()
         //chull.reconstruct(*cloud_hull, *polygons);
     }
 
-    /*
-    for (double alpha = 0.5; alpha <= 2.0; alpha += 0.5)
-    {
-        chull.setAlpha(alpha);
-        chull.reconstruct(*cloud_hull, *polygons);
-    }
-    */
     std::cout << "Concave hull has: " << cloud_hull -> points.size() << std::endl; 
     std::cout << "Polygon vec has size: " << polygons -> size() << std::endl;
     //for (int i = 0; i < polygons -> size(); i++)
