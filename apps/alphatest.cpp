@@ -403,6 +403,10 @@ int AlphaShapeQuery::execute()
     int csize = 0;
     int mult = 1;
 
+    chull.setAlpha(m_Alpha);
+    chull.reconstruct(*cloud_hull, *polygons);
+
+    /*
     while (csize == 0)
     {
         chull.setAlpha(2*mult);
@@ -424,6 +428,7 @@ int AlphaShapeQuery::execute()
         chull.setInputCloud(cloud_hull);
         std::cout << "New Cloud Size: " << cloud_hull -> points.size() << std::endl;
     }
+    */
 
     /*
     std::cout << "Alpha: " << m_Alpha << std::endl;
