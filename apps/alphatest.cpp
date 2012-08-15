@@ -335,9 +335,8 @@ int AlphaShapeQuery::execute()
     //double density_alpha = (((xmax - xmin)*(ymax-ymin))/cells);
     std::cout << "Xrange: " << (xmax - xmin) << std::endl;
     std::cout << "Yrange: " << (ymax - ymin) << std::endl;
+    std::cout << "Num Points: " << numPoints << std::endl;
 
-    boost::uint64_t density_alpha = static_cast<boost::uint64_t>(sqrt((xmax - xmin))*sqrt((ymax-ymin))/(150*150));
-    std::cout << "Density Alpha: " << density_alpha << std::endl;
     std::cout << "Getting New Valid Points" << std::endl; 
     std::stack<boost::uint64_t>* goodpoints = grid -> getValidPointIdx();
 
@@ -399,27 +398,33 @@ int AlphaShapeQuery::execute()
 
     chull.setDimension(2);
     std::vector<pcl::Vertices>* polygons = new std::vector<pcl::Vertices>;
+
+
     int csize = 0;
     int mult = 1;
-    int scale = 0;
+
     while (csize == 0)
     {
-        for (float _a = 0.5; _a < 1; _a+=0.2)
-        {
-            chull.setAlpha(density_alpha * _a * mult + scale);
-            std::cout << "Alpha: " << density_alpha*_a*mult + scale << std::endl;
-            chull.reconstruct(*cloud_hull, *polygons);
-            chull.setInputCloud(cloud_hull);
-        }
+        chull.setAlpha(2*mult);
+        std::cout << "Trying Alpha: " << 2*mult << std::endl;
+        chull.reconstruct(*cloud_hull, *polygons);
+       
         csize = cloud_hull -> points.size();
-        if (csize == 0)
-        {
-            chull.setInputCloud(cloud_projected);
-            std::cout << "Alpha shape failed, doing magic." << std::endl;
-        }
-        mult += 100;
-        scale += 30000;
+        chull.setInputCloud(cloud_projected);
+        mult += 10;
     }
+    int calc_alpha = (2*mult)*10;
+    std::cout << "Decided on Alpha = " << calc_alpha << std::endl;
+    chull.setInputCloud(cloud_projected);
+    for (double _a = 1; _a < 1.5; _a += 0.2)
+    {
+        std::cout << "Creating shape, Alpha = " << pow(calc_alpha,_a) << std::endl;
+        chull.setAlpha(pow(calc_alpha,_a));
+        chull.reconstruct(*cloud_hull, *polygons);
+        chull.setInputCloud(cloud_hull);
+        std::cout << "New Cloud Size: " << cloud_hull -> points.size() << std::endl;
+    }
+
     /*
     std::cout << "Alpha: " << m_Alpha << std::endl;
     chull.setAlpha(m_Alpha);
