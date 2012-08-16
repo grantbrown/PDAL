@@ -400,11 +400,19 @@ int AlphaShapeQuery::execute()
     std::vector<pcl::Vertices>* polygons = new std::vector<pcl::Vertices>;
 
 
-    int csize = 0;
-    int mult = 1;
+    int csize = 100000;
+    double alpha = m_Alpha;
 
-    chull.setAlpha(m_Alpha);
-    chull.reconstruct(*cloud_hull, *polygons);
+    while (csize > 10000)
+    {
+        std::cout << "Using Alpha = " << alpha << " Cloud size is: ";
+        chull.setAlpha(alpha);
+        chull.reconstruct(*cloud_hull, *polygons);
+        std::cout << cloud_hull -> points.size() << std::endl;
+        csize = cloud_hull -> points.size();
+        chull.setInputCloud(cloud_hull);
+        alpha *= 1.1;
+    }
 
     /*
     while (csize == 0)
