@@ -354,6 +354,7 @@ int AlphaShapeQuery::execute()
     (*cloud_ptr).points.resize(goodpoints -> size());
     
 
+    //place centered points into cloud
     while (!(goodpoints -> empty()))
     {
         good_point = goodpoints -> top(); 
@@ -363,8 +364,8 @@ int AlphaShapeQuery::execute()
         _x = (outdata -> getField<boost::int32_t>(dimx2,0));
         _y = (outdata -> getField<boost::int32_t>(dimy2,0));
         //_z = (outdata -> getField<boost::int32_t>(dimz2,0)); 
-        (*cloud_ptr).points[itr].x = _x;
-        (*cloud_ptr).points[itr].y = _y;
+        (*cloud_ptr).points[itr].x = (_x - (xmin + (xmax-xmin)/2));
+        (*cloud_ptr).points[itr].y = (_y - (ymin + (ymax-ymin)/2));
         //(*cloud_ptr).points[itr].z = _z;
         itr += 1;
         goodpoints -> pop();
@@ -403,6 +404,7 @@ int AlphaShapeQuery::execute()
     int csize = 100000;
     double alpha = m_Alpha;
 
+    // Try to avoid doing nearest neighbors search with too many points.
     while (csize > 10000)
     {
         std::cout << "Using Alpha = " << alpha << " Cloud size is: ";
@@ -571,8 +573,8 @@ int AlphaShapeQuery::execute()
     while(lastIdx != 0)
     {
         lastIdx = map[idx];
-        outfile << output_cloud_hull -> points[idx].x << " " << output_cloud_hull -> points[idx].y << ", " 
-                << output_cloud_hull -> points[lastIdx].x << " " << output_cloud_hull -> points[lastIdx].y 
+        outfile << (output_cloud_hull -> points)[idx].x + xmin + (xmax-xmin)/2 << " " << (output_cloud_hull -> points)[idx].y + ymin + (ymax - ymin)/2 << ", " 
+                << (output_cloud_hull -> points[lastIdx]).x  + xmin + (xmax-xmin)/2 << " " << (output_cloud_hull -> points[lastIdx]).y + ymin + (ymax - ymin)/2 
                 << (lastIdx == 0 ? "))" : ",\n");
         idx = lastIdx;
     }
