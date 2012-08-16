@@ -514,69 +514,107 @@ int AlphaShapeQuery::execute()
     } 
 
     std::cout << "Duplicates removed, performing nearest neighbors traversal." << std::endl;
-    std::tr1::unordered_map<int, int> map;
-    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-    kdtree.setInputCloud(output_cloud_hull);
-    pcl::PointXYZ searchPoint;
-    int k = outsize-1;
-    std::vector<int> pointIdxNkNSearch(k);
-    std::vector<float> pointNkNDists(k);
-    int search_result;
-    //int threshold = 50000000;
-    int idx = 0;
-    int lastIdx = 0;
-    for (int j = 0; j < i; j++)
+    std::vector<std::tr1::unordered_map<int,int> > polygon_maps;
+    polygon_maps.resize(polygons -> size());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr poly_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    for (int poly = 0; poly < polygons -> size(); poly ++ )
     {
+        std::tr1::unordered_map<int, int> map;
 
-        searchPoint.x = output_cloud_hull -> points[lastIdx].x;
-        searchPoint.y = output_cloud_hull -> points[lastIdx].y;
-        search_result = kdtree.nearestKSearch(searchPoint, k, pointIdxNkNSearch, pointNkNDists);
-        for (int z = 1; z < k; z++)
+        pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+        poly_cloud -> points.resize((*polygons)[poly].vertices.size());
+        //Instert Polygon Points into poly_cloud
+        
+        for (int vtx = 0; vtx < (*polygons)[poly].vertices.size(); vtx ++)
         {
-            //if (pointNkNDists[z] < threshold && pointNkNDists[z] != 0 && (map.count(pointIdxNkNSearch[z]) == 0))
-            //if (pointNkNDists[z] != 0 && (map.count(pointIdxNkNSearch[z]) == 0))
-            if ((map.count(pointIdxNkNSearch[z]) == 0))
+            poly_cloud -> points[vtx].x =  (output_cloud_hull -> points)[(*polygons)[poly].vertices[vtx]].x;
+            poly_cloud -> points[vtx].y =  (output_cloud_hull -> points)[(*polygons)[poly].vertices[vtx]].y;
+        }
+
+        kdtree.setInputCloud(poly_cloud);
+        pcl::PointXYZ searchPoint;
+        int k = poly_cloud -> size() - 1;
+        std::vector<int> pointIdxNkNSearch(k);
+        std::vector<float> pointNkNDists(k);
+        int search_result;
+        //int threshold = 50000000;
+        int idx = 0;
+        int lastIdx = 0;
+        for (int j = 0; j < poly_cloud -> size(); j++)
+        {
+
+            searchPoint.x = poly_cloud -> points[lastIdx].x;
+            searchPoint.y = poly_cloud -> points[lastIdx].y;
+            search_result = kdtree.nearestKSearch(searchPoint, k, pointIdxNkNSearch, pointNkNDists);
+            for (int z = 1; z < k; z++)
             {
-                idx = pointIdxNkNSearch[z];
-                map[lastIdx] = idx;
-                //std::cout << "Mapping Index " << lastIdx << " to " << idx << std::endl;
-                lastIdx = idx;
-                break;
-            }
-            if (z == k)
-            {
-                std::cout << "No Close Point Found For " << lastIdx << " NN Dists: (" << 
-                pointNkNDists[0] << ", " <<  
-                pointNkNDists[1] << ", " <<  
-                pointNkNDists[2] << ", " << 
-                pointNkNDists[3] << ")" << " Map Count is (" << 
-                map.count(pointIdxNkNSearch[0]) << ", " <<
-                map.count(pointIdxNkNSearch[1]) << ", " <<
-                map.count(pointIdxNkNSearch[2]) << ", " <<
-                map.count(pointIdxNkNSearch[3]) << ") " <<
-                std::endl;
+                //if (pointNkNDists[z] < threshold && pointNkNDists[z] != 0 && (map.count(pointIdxNkNSearch[z]) == 0))
+                //if (pointNkNDists[z] != 0 && (map.count(pointIdxNkNSearch[z]) == 0))
+                if ((map.count(pointIdxNkNSearch[z]) == 0))
+                {
+                    idx = pointIdxNkNSearch[z];
+                    map[lastIdx] = idx;
+                    //std::cout << "Mapping Index " << lastIdx << " to " << idx << std::endl;
+                    lastIdx = idx;
+                    break;
+                }
+                //The following condition never fires, z is k-1 at max. Good for debug output if needed. 
+                if (z == k)
+                {
+                    std::cout << "No Close Point Found For " << lastIdx << " NN Dists: (" << 
+                    pointNkNDists[0] << ", " <<  
+                    pointNkNDists[1] << ", " <<  
+                    pointNkNDists[2] << ", " << 
+                    pointNkNDists[3] << ")" << " Map Count is (" << 
+                    map.count(pointIdxNkNSearch[0]) << ", " <<
+                    map.count(pointIdxNkNSearch[1]) << ", " <<
+                    map.count(pointIdxNkNSearch[2]) << ", " <<
+                    map.count(pointIdxNkNSearch[3]) << ") " <<
+                    std::endl;
+                }
             }
         }
+        map[lastIdx] = 0;
+        polygon_maps[poly] = map;
     }
-    map[lastIdx] = 0;
 
     std::cout << "Writing to: " << m_outputFile << std::endl;
-    idx = 0;
-    lastIdx =-1;
     ofstream outfile;
     char* filepath = new char[m_outputFile.size() + 1];
     filepath[m_outputFile.size() + 1] = 0;
     memcpy(filepath, m_outputFile.c_str(), m_outputFile.size());
     outfile.open(filepath);
     outfile <<  fixed << setprecision(0);
-    outfile << "POLYGON((";
-    while(lastIdx != 0)
+    outfile << "MULTIPOLYGON((";
+
+
+    int idx;
+    int lastIdx;
+    for (int poly = 0; poly < polygons -> size(); poly ++)
     {
-        lastIdx = map[idx];
-        outfile << (output_cloud_hull -> points)[idx].x + xmin + (xmax-xmin)/2 << " " << (output_cloud_hull -> points)[idx].y + ymin + (ymax - ymin)/2 << ", " 
-                << (output_cloud_hull -> points[lastIdx]).x  + xmin + (xmax-xmin)/2 << " " << (output_cloud_hull -> points[lastIdx]).y + ymin + (ymax - ymin)/2 
-                << (lastIdx == 0 ? "))" : ",\n");
-        idx = lastIdx;
+        outfile << "(";
+        std::tr1::unordered_map<int, int> map;
+        map = polygon_maps[poly];
+        idx = 0;
+        lastIdx =-1;
+    
+
+        while(lastIdx != 0)
+        {
+            lastIdx = map[idx];
+            outfile << ((output_cloud_hull ->points)[(*polygons)[poly].vertices[idx]]).x + xmin + (xmax-xmin)/2 << " " << ((output_cloud_hull -> points)[(*polygons)[poly].vertices[idx]]).y + ymin + (ymax - ymin)/2 << ", " 
+                    << ((output_cloud_hull -> points)[(*polygons)[poly].vertices[lastIdx]]).x  + xmin + (xmax-xmin)/2 << " " << ((output_cloud_hull -> points)[(*polygons)[poly].vertices[lastIdx]]).y + ymin + (ymax - ymin)/2 
+                    << (lastIdx == 0 ? ")" : ",\n");
+            idx = lastIdx;
+        }
+        if (poly == polygons -> size() -1 )
+        {
+            outfile << "))";
+        }
+        else
+        {
+            outfile << ",";
+        }
     }
     outfile.close();
 
