@@ -333,6 +333,30 @@ int AlphaShapeQuery::execute()
         grid -> subset_and_regrid(cells); 
     }
     //double density_alpha = (((xmax - xmin)*(ymax-ymin))/cells);
+    //Find alpha heuristically    
+    int xrange = xmax-xmin;
+    int yrange = ymax-ymin;
+    int num = (xrange > yrange ? xrange : yrange);
+    int denom = (xrange <= yrange ? xrange : yrange);
+
+    double ratio = static_cast<double>(num)/denom;
+    boost::uint64_t area = (xrange)*(yrange); 
+    double density = static_cast<double>(numPoints)/area;
+    
+    std::cout << "num = " << num << std::endl;
+    std::cout << "denom = " << denom << std::endl;
+    std::cout << "ratio = " << ratio << std::endl;
+    std::cout << "density = " << density << std::endl;
+
+    double  CalcAlpha = (70000 + 0.04838 * num - (0.0497*denom) - (17490 * ratio));
+
+    std::cout << "Alpha Calculated to be: " << CalcAlpha << std::endl;
+    if (CalcAlpha < 0)
+    {
+        std::cout << "WARNING, negative alpha calculated. Using dummy value." << std::endl;
+        CalcAlpha = 50000;
+    }
+
     std::cout << "Xrange: " << (xmax - xmin) << std::endl;
     std::cout << "Yrange: " << (ymax - ymin) << std::endl;
     std::cout << "Num Points: " << numPoints << std::endl;
@@ -402,7 +426,8 @@ int AlphaShapeQuery::execute()
 
 
     int csize = 100000;
-    double alpha = m_Alpha;
+    //double alpha = m_Alpha;
+    double alpha = CalcAlpha;
 
     // Try to avoid doing nearest neighbors search with too many points.
     while (csize > 10000)

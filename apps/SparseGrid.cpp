@@ -220,20 +220,25 @@ std::stack<boost::uint64_t>* SparseGrid::getValidPointIdx()
             SparseGridNode* gridnode = (*grid)[getIndex(x,y)];
             if (!isValid(x,y))
             {
+                /*
                 std::vector<float> prob_draw;
                 prob_draw.resize(gridnode-> point_stack -> size());
                 for (int i = 0; i < gridnode -> point_stack -> size(); i ++)
                 {
                     prob_draw[i] = unidist(generator);
                 }
+                */
                 gridnode -> make_single();
+                //gridnode -> point_stack -> pop();
                 //gridnode -> decimate(&prob_draw);
             }
-            while (!((gridnode -> point_stack) -> empty()))
-            {
-                idx = (gridnode -> point_stack) -> top();
-                outstack -> push(idx -> pt_idx);
-                (gridnode -> point_stack) -> pop();
+            else{
+                while (!((gridnode -> point_stack) -> empty()))
+                {
+                    idx = (gridnode -> point_stack) -> top();
+                    outstack -> push(idx -> pt_idx);
+                    (gridnode -> point_stack) -> pop();
+                }
             }
         }
     }
