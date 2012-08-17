@@ -26,6 +26,8 @@ set(PCINFO pcinfo)
 set(PCPIPELINE pcpipeline)
 set(PCQUERY pcquery)
 set(ALPHATEST alphatest)
+set(ALPHATEST2 alphatest_cgal)
+
 
 set(COMMON_APP_SOURCES Application.cpp Application.hpp AppSupport.cpp AppSupport.hpp)
 
@@ -67,6 +69,12 @@ if(ALPHATEST)
     add_executable(${ALPHATEST} alphatest.cpp SparseGrid.cpp ${COMMON_APP_SOURCES})
     target_link_libraries(${ALPHATEST} ${PDAL_LIB_NAME} ${Boost_LIBRARIES} ${PCL_LIBRARIES})
 endif()
+
+if(ALPHATEST2)
+    add_executable(${ALPHATEST2} alphatest_cgal.cpp SparseGrid.cpp ${COMMON_APP_SOURCES})
+    target_link_libraries(${ALPHATEST} ${PDAL_LIB_NAME} ${Boost_LIBRARIES} ${CGAL_LIBRARIES})
+endif()
+
 #------------------------------------------------------------------------------
 # Targets installation
 #------------------------------------------------------------------------------

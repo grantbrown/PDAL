@@ -21,8 +21,10 @@ cmake   -G "Unix Makefiles"  \
         -DWITH_LIBXML2=ON \
         -DWITH_PYTHON=ON \
         -DWITH_FLANN=ON \
+        -DWITH_CGAL=ON \
         -DBOOST_ROOT=/usr/local/boost_1_49_0/ \
         -DPCL_LIBRARY_DIRS=/usr/lib \
+        -DCGAL_LIBRARY_DIRS=/usr/lib \
         -DGEOTIFF_INCLUDE_DIR=${GEOTIFF_HOME}/include/ \
         -DGEOTIFF_LIBRARY=${GEOTIFF_HOME}/lib/libgeotiff.${SO_EXT} \
         -DICONV_INCLUDE_DIR=/usr/include \

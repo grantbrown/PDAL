@@ -70,13 +70,6 @@
 #include <pcl/surface/concave_hull.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/convex_hull_2.h>
-
-typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-typedef K::Point_2 Point_2;
-
-
 /*
 #include <sensor_msgs/PointCloud2.h>
 
