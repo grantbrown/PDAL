@@ -60,13 +60,13 @@
 
 #include <iomanip>
 
-/*
+
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/convex_hull_2.h>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef K::Point_2 Point_2;
-*/
+
 
 //Rip out GEOS stuff
 namespace alphatest_cgal

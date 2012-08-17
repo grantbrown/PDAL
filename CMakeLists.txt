@@ -443,7 +443,7 @@ set(WITH_CGAL TRUE CACHE BOOL "Choose if CGAL support should be built")
 
 if(WITH_CGAL)
     message(status " Looking for CGAL")
-    find_package(CGAL REQUIRED COMPONENTS Core)
+    SET(CGAL_CORE_LIB /usr/lib/libCGAL_Core.so)
     include_directories(${CGAL_INCLUDE_DIRS})
     link_directories(${CGAL_LIBRARY_DIRS})
     add_definitions(${CGAL_DEFINITIONS})

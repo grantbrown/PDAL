@@ -72,7 +72,7 @@ endif()
 
 if(ALPHATEST2)
     add_executable(${ALPHATEST2} alphatest_cgal.cpp SparseGrid.cpp ${COMMON_APP_SOURCES})
-    target_link_libraries(${ALPHATEST2} ${PDAL_LIB_NAME} ${Boost_LIBRARIES} ${CGAL_LIBRARIES})
+    target_link_libraries(${ALPHATEST2} ${CGAL_CORE_LIB} ${PDAL_LIB_NAME} ${Boost_LIBRARIES} ${CGAL_LIBRARIES})
 endif()
 
 #------------------------------------------------------------------------------
