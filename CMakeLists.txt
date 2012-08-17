@@ -443,7 +443,7 @@ set(WITH_CGAL TRUE CACHE BOOL "Choose if CGAL support should be built")
 
 if(WITH_CGAL)
     message(status " Looking for CGAL")
-    find_package(CGAL REQUIRED COMPONENTS Core ImageIO Qt4)
+    find_package(CGAL REQUIRED COMPONENTS Core)
     include_directories(${CGAL_INCLUDE_DIRS})
     link_directories(${CGAL_LIBRARY_DIRS})
     add_definitions(${CGAL_DEFINITIONS})

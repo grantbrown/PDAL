@@ -60,11 +60,13 @@
 
 #include <iomanip>
 
+/*
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/convex_hull_2.h>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef K::Point_2 Point_2;
+*/
 
 //Rip out GEOS stuff
 namespace alphatest_cgal
@@ -343,12 +345,12 @@ int AlphaShapeQuery::execute()
     // Do magic here.
 
     std::cout << "Writing to: " << m_outputFile << std::endl;
-    ofstream outfile;
+    std::ofstream outfile;
     char* filepath = new char[m_outputFile.size() + 1];
     filepath[m_outputFile.size() + 1] = 0;
     memcpy(filepath, m_outputFile.c_str(), m_outputFile.size());
     outfile.open(filepath);
-    outfile <<  fixed << setprecision(0);
+    outfile <<  std::fixed << std::setprecision(0);
 
     // Write WKT output here. 
 
