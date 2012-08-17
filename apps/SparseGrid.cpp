@@ -7,6 +7,8 @@
 #include <stack>
 #include <algorithm>
 #include <math.h>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_real.hpp>
 
 
 //Sparse Grid Implementation
@@ -190,6 +192,13 @@ std::stack<SparseGridNode*>* SparseGrid::getValidPointRefs(boost::uint64_t* coun
             }
             else if (gridnode -> point_stack -> size() > 0)
             {
+                std::vector<float> prob_draw;
+                prob_draw.resize(gridnode-> point_stack -> size());
+                for (int i = 0; i < gridnode -> point_stack -> size(); i ++)
+                {
+                    prob_draw[i] = unidist(generator);
+                }
+                //gridnode -> decimate(&prob_draw);
                 gridnode -> make_single();
                 outstack -> push(gridnode);
                 (*count_ref) += 1;
@@ -208,17 +217,24 @@ std::stack<boost::uint64_t>* SparseGrid::getValidPointIdx()
     {
     for (int y = 0; y < ybins; y++)
     {
-            if (isValid(x,y))
+            SparseGridNode* gridnode = (*grid)[getIndex(x,y)];
+            if (!isValid(x,y))
             {
-                SparseGridNode* gridnode = (*grid)[getIndex(x,y)];
-                while (!((gridnode -> point_stack) -> empty()))
+                std::vector<float> prob_draw;
+                prob_draw.resize(gridnode-> point_stack -> size());
+                for (int i = 0; i < gridnode -> point_stack -> size(); i ++)
                 {
-                    idx = (gridnode -> point_stack) -> top();
-                    outstack -> push(idx -> pt_idx);
-                    (gridnode -> point_stack) -> pop();
+                    prob_draw[i] = unidist(generator);
                 }
+                gridnode -> make_single();
+                //gridnode -> decimate(&prob_draw);
             }
-
+            while (!((gridnode -> point_stack) -> empty()))
+            {
+                idx = (gridnode -> point_stack) -> top();
+                outstack -> push(idx -> pt_idx);
+                (gridnode -> point_stack) -> pop();
+            }
         }
     }
     return(outstack);
@@ -246,6 +262,31 @@ void SparseGridNode::make_single()
     {
         point_stack -> pop();
     }
+}
+
+void SparseGridNode::decimate(std::vector<float>* prob_draw)
+{
+    int kept =-0;
+    int discarded = 0;
+    std::stack<PointData*>* new_point_stack = new std::stack<PointData*>;
+   
+    for (int j = 0; j < point_stack -> size(); j++)
+    {
+        if ((*prob_draw)[j] < 0.9)
+        {
+            discarded += 1;
+            point_stack -> pop();
+        }
+        else 
+        {   
+            new_point_stack -> push(point_stack -> top());
+            point_stack -> pop();
+            kept += 1;
+        }
+    }
+    delete point_stack;
+    point_stack = new_point_stack;
+    //std::cout << "Kept " << kept << " of " << kept + discarded << std::endl;
 }
 
 SparseGridNode::~SparseGridNode()

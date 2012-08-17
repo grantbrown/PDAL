@@ -3,6 +3,8 @@
 #include <stack>
 #include <vector>
 #include <boost/cstdint.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_real.hpp>
 
 
 struct PointData
@@ -18,6 +20,7 @@ struct SparseGridNode
     ~SparseGridNode();
     int count;
     void make_single();
+    void decimate(std::vector<float>* prob_draw);
     std::stack<PointData*>* point_stack;
 };
 
@@ -46,6 +49,12 @@ class SparseGrid
         boost::uint64_t numPoints; int tbins;
         double xdensity; double ydensity;
         double xinterval; double yinterval;
+
+        //Random Stuff
+        
+        boost::random::mt19937 generator;
+        boost::random::uniform_real_distribution<> unidist;
+
     private:
         int initializeGrid();
     
