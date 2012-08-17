@@ -3,8 +3,8 @@
 #include <stack>
 #include <vector>
 #include <boost/cstdint.hpp>
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_real.hpp>
+//#include <boost/random/mersenne_twister.hpp>
+//#include <boost/random/uniform_real.hpp>
 
 
 struct PointData
@@ -52,8 +52,8 @@ class SparseGrid
 
         //Random Stuff
         
-        boost::random::mt19937 generator;
-        boost::random::uniform_real_distribution<> unidist;
+        //boost::random::mt19937 generator;
+        //boost::random::uniform_real_distribution<> unidist;
 
     private:
         int initializeGrid();

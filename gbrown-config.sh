@@ -22,6 +22,7 @@ cmake   -G "Unix Makefiles"  \
         -DWITH_PYTHON=ON \
         -DWITH_FLANN=ON \
         -DWITH_CGAL=ON \
+        -DCGAL_DIR=/usr/local/CGAL \
         -DBOOST_ROOT=/usr/local/boost_1_49_0/ \
         -DPCL_LIBRARY_DIRS=/usr/lib \
         -DCGAL_LIBRARY_DIRS=/usr/lib \

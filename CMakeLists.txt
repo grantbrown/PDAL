@@ -439,11 +439,14 @@ if(WITH_PCL)
     set(PDAL_HAVE_PCL 1)
 endif()
 
+
+
 set(WITH_CGAL TRUE CACHE BOOL "Choose if CGAL support should be built")
 
 if(WITH_CGAL)
     message(status " Looking for CGAL")
-    SET(CGAL_CORE_LIB /usr/lib/libCGAL_Core.so)
+    find_package(PCL 1.6 REQUIRED COMPONENTS common) 
+
     include_directories(${CGAL_INCLUDE_DIRS})
     link_directories(${CGAL_LIBRARY_DIRS})
     add_definitions(${CGAL_DEFINITIONS})

@@ -7,8 +7,8 @@
 #include <stack>
 #include <algorithm>
 #include <math.h>
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_real.hpp>
+//#include <boost/random/mersenne_twister.hpp>
+//#include <boost/random/uniform_real.hpp>
 
 
 //Sparse Grid Implementation
@@ -192,12 +192,14 @@ std::stack<SparseGridNode*>* SparseGrid::getValidPointRefs(boost::uint64_t* coun
             }
             else if (gridnode -> point_stack -> size() > 0)
             {
+                /*
                 std::vector<float> prob_draw;
                 prob_draw.resize(gridnode-> point_stack -> size());
                 for (int i = 0; i < gridnode -> point_stack -> size(); i ++)
                 {
                     prob_draw[i] = unidist(generator);
                 }
+                */
                 //gridnode -> decimate(&prob_draw);
                 gridnode -> make_single();
                 outstack -> push(gridnode);
